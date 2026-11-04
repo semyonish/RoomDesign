@@ -1,0 +1,531 @@
+{
+ "_": "360° тур: комнаты с точками обзора (камеры type cube в rooms/apartment.json) в порядке обхода — 1/4, центр, 3/4 длинной стороны; open — двери, открытые на 90° в этой точке; main — точка кнопки комнаты. Двери между комнатами (at — стрелка [x, y, z], см) ведут в ближайшие к двери точки; точки комнаты связаны шагами. switches — клавиши комнаты (group — light_group ламп или layer=g1+g2; day — дневной свет по сценарию), default — что включено при входе, panels — выключатели на стенах [x, y, z]. Свет остальных комнат (слой rest) горит всегда, кроме дня",
+ "first": "hall",
+ "plate_lift": 20,
+ "_plate_lift": "накладку выключателя в туре показываем на 20 см выше настоящего, чтобы его не закрывать (2026-10-24)",
+ "step_z": 50,
+ "_step_z": "стрелка шага — над точкой, куда шагаем, на высоте 50 см",
+ "rooms": {
+  "hall": {
+   "title": "Прихожая",
+   "main": "hall",
+   "points": [
+    {
+     "id": "hall_a",
+     "camera": "hall_a_360"
+    },
+    {
+     "id": "hall",
+     "camera": "hall_360",
+     "open": [
+      "study"
+     ]
+    },
+    {
+     "id": "hall_b",
+     "camera": "hall_b_360",
+     "open": [
+      "br1",
+      "bath",
+      "toilet",
+      "br2"
+     ]
+    }
+   ],
+   "switches": {
+    "keys": [
+     {
+      "group": "hall_1",
+      "label": "Клавиша 1",
+      "hint": "2 пары вдоль шкафа-купе"
+     },
+     {
+      "group": "hall_2",
+      "label": "Клавиша 2",
+      "hint": "остальные 4 пары"
+     }
+    ],
+    "default": [
+     "hall_1",
+     "hall_2"
+    ],
+    "panels": [
+     {
+      "at": [
+       54,
+       0,
+       90
+      ],
+      "keys": [
+       "hall_1",
+       "hall_2"
+      ],
+      "_": "S1 у входной двери"
+     }
+    ]
+   }
+  },
+  "kitchen_living": {
+   "title": "Кухня-гостиная",
+   "main": "kitchen_living",
+   "points": [
+    {
+     "id": "kitchen_living_a",
+     "camera": "lr_a_360"
+    },
+    {
+     "id": "kitchen_living",
+     "camera": "lr_360"
+    },
+    {
+     "id": "kitchen_living_b",
+     "camera": "lr_b_360"
+    }
+   ],
+   "switches": {
+    "keys": [
+     {
+      "group": "chandelier",
+      "label": "Люстра"
+     },
+     {
+      "group": "kitchen_spots",
+      "label": "Кухня",
+      "hint": "кухонная линия точечных"
+     },
+     {
+      "group": "sofa_spots",
+      "label": "Диван",
+      "hint": "точечные у дивана"
+     },
+     {
+      "group": "tv_spots",
+      "label": "ТВ",
+      "hint": "точечные у ТВ"
+     },
+     {
+      "group": "ambient=cornice+kitchen_led",
+      "label": "Подсветка",
+      "hint": "карниз и подсветка кухни (выключатель фартука)"
+     },
+     {
+      "group": "loggia_lr",
+      "label": "Лоджия",
+      "hint": "2 лампы на лоджии"
+     },
+     {
+      "group": "day",
+      "label": "День",
+      "scenario": "day"
+     }
+    ],
+    "default": [
+     "chandelier",
+     "kitchen_spots",
+     "sofa_spots",
+     "tv_spots",
+     "ambient"
+    ],
+    "panels": [
+     {
+      "at": [
+       -122,
+       -32,
+       90
+      ],
+      "keys": [
+       "chandelier",
+       "kitchen_spots"
+      ],
+      "_": "S2 у арки, первая рамка"
+     },
+     {
+      "at": [
+       -129.1,
+       -32,
+       90
+      ],
+      "keys": [
+       "sofa_spots",
+       "tv_spots"
+      ],
+      "_": "S2 у арки, вторая рамка"
+     },
+     {
+      "at": [
+       0,
+       -297.7,
+       105.3
+      ],
+      "keys": [
+       "ambient"
+      ],
+      "_": "выключатель фартука (карниз и подсветка кухни вместе)"
+     },
+     {
+      "at": [
+       -465,
+       -325,
+       90
+      ],
+      "keys": [
+       "loggia_lr"
+      ],
+      "_": "S_balcony у балконной двери — свет лоджии"
+     }
+    ]
+   }
+  },
+  "bedroom_1": {
+   "title": "Спальня 1",
+   "main": "bedroom_1",
+   "points": [
+    {
+     "id": "bedroom_1_a",
+     "camera": "br1_a_360",
+     "open": [
+      "br1"
+     ]
+    },
+    {
+     "id": "bedroom_1",
+     "camera": "br1_360"
+    },
+    {
+     "id": "bedroom_1_b",
+     "camera": "br1_b_360"
+    }
+   ],
+   "switches": {
+    "keys": [
+     {
+      "group": "br1_spots_1",
+      "label": "Клавиша 1",
+      "hint": "4 крайние лампы"
+     },
+     {
+      "group": "br1_spots_2",
+      "label": "Клавиша 2",
+      "hint": "остальные 8 ламп"
+     },
+     {
+      "group": "sconces",
+      "label": "Бра"
+     },
+     {
+      "group": "loggia_br1",
+      "label": "Лоджия",
+      "hint": "2 лампы на лоджии"
+     },
+     {
+      "group": "day",
+      "label": "День",
+      "scenario": "br1_day"
+     }
+    ],
+    "default": [
+     "br1_spots_1",
+     "br1_spots_2"
+    ],
+    "panels": [
+     {
+      "at": [
+       254,
+       356,
+       90
+      ],
+      "keys": [
+       "br1_spots_1",
+       "br1_spots_2"
+      ],
+      "_": "S_br1 у двери"
+     },
+     {
+      "at": [
+       431.85,
+       549,
+       70
+      ],
+      "keys": [
+       "sconces"
+      ],
+      "_": "у изголовья слева"
+     },
+     {
+      "at": [
+       645.15,
+       549,
+       70
+      ],
+      "keys": [
+       "sconces"
+      ],
+      "_": "у изголовья справа"
+     },
+     {
+      "at": [
+       778,
+       303.5,
+       90
+      ],
+      "keys": [
+       "loggia_br1"
+      ],
+      "_": "у балконной двери — свет лоджии"
+     }
+    ]
+   }
+  },
+  "study": {
+   "title": "Кабинет",
+   "main": "study",
+   "points": [
+    {
+     "id": "study_a",
+     "camera": "st_a_360"
+    },
+    {
+     "id": "study",
+     "camera": "st_360"
+    },
+    {
+     "id": "study_b",
+     "camera": "st_b_360",
+     "open": [
+      "study"
+     ]
+    }
+   ],
+   "switches": {
+    "keys": [
+     {
+      "group": "st_spots_1",
+      "label": "Клавиша 1",
+      "hint": "2 лампы над столом + 1 у шкафа"
+     },
+     {
+      "group": "st_spots_2",
+      "label": "Клавиша 2",
+      "hint": "остальные 6 ламп"
+     },
+     {
+      "group": "day",
+      "label": "День",
+      "scenario": "st_day"
+     }
+    ],
+    "default": [
+     "st_spots_1",
+     "st_spots_2"
+    ],
+    "panels": [
+     {
+      "at": [
+       -119,
+       117,
+       90
+      ],
+      "keys": [
+       "st_spots_1",
+       "st_spots_2"
+      ],
+      "_": "S_st у двери"
+     }
+    ]
+   }
+  },
+  "bedroom_2": {
+   "title": "Спальня 2",
+   "main": "bedroom_2",
+   "points": [
+    {
+     "id": "bedroom_2_a",
+     "camera": "br2_a_360"
+    },
+    {
+     "id": "bedroom_2",
+     "camera": "br2_360"
+    },
+    {
+     "id": "bedroom_2_b",
+     "camera": "br2_b_360",
+     "open": [
+      "br2"
+     ]
+    }
+   ],
+   "switches": {
+    "keys": [
+     {
+      "group": "br2_spots_1",
+      "label": "Клавиша 1",
+      "hint": "4 крайние лампы"
+     },
+     {
+      "group": "br2_spots_2",
+      "label": "Клавиша 2",
+      "hint": "остальные 8 ламп"
+     },
+     {
+      "group": "day",
+      "label": "День",
+      "scenario": "br2_day"
+     }
+    ],
+    "default": [
+     "br2_spots_1",
+     "br2_spots_2"
+    ],
+    "panels": [
+     {
+      "at": [
+       -119,
+       357,
+       90
+      ],
+      "keys": [
+       "br2_spots_1",
+       "br2_spots_2"
+      ],
+      "_": "S_br2 у двери"
+     }
+    ]
+   }
+  },
+  "bathroom": {
+   "title": "Ванная",
+   "main": "bathroom",
+   "points": [
+    {
+     "id": "bathroom",
+     "camera": "bath_360"
+    }
+   ],
+   "switches": {
+    "_": "выключатель S_bath1 снаружи, в прихожей — в ванной только панель",
+    "keys": [
+     {
+      "group": "bathroom_1",
+      "label": "У двери",
+      "hint": "2 лампы у двери"
+     },
+     {
+      "group": "bathroom_2",
+      "label": "Над ванной",
+      "hint": "2 лампы над ванной (с вентилятором)"
+     },
+     {
+      "group": "bath_mirror",
+      "label": "Зеркало",
+      "hint": "подсветка зеркала"
+     }
+    ],
+    "default": [
+     "bathroom_1",
+     "bathroom_2",
+     "bath_mirror"
+    ],
+    "panels": []
+   }
+  },
+  "toilet": {
+   "title": "Туалет",
+   "main": "toilet",
+   "points": [
+    {
+     "id": "toilet",
+     "camera": "toilet_360"
+    }
+   ],
+   "switches": {
+    "_": "выключатель S_bath2 снаружи, в прихожей — в туалете только панель",
+    "keys": [
+     {
+      "group": "toilet_1",
+      "label": "Свет",
+      "hint": "3 лампы"
+     },
+     {
+      "group": "toilet_mirror",
+      "label": "Зеркало",
+      "hint": "подсветка зеркала"
+     }
+    ],
+    "default": [
+     "toilet_1",
+     "toilet_mirror"
+    ],
+    "panels": []
+   }
+  }
+ },
+ "doors": [
+  {
+   "between": [
+    "hall",
+    "kitchen_living"
+   ],
+   "at": [
+    -53.5,
+    -16,
+    100
+   ],
+   "_": "арка 107, шов потолка y −16"
+  },
+  {
+   "between": [
+    "hall",
+    "bedroom_1"
+   ],
+   "at": [
+    247,
+    296,
+    100
+   ]
+  },
+  {
+   "between": [
+    "hall",
+    "study"
+   ],
+   "at": [
+    -112,
+    177,
+    100
+   ]
+  },
+  {
+   "between": [
+    "hall",
+    "bedroom_2"
+   ],
+   "at": [
+    -111,
+    297,
+    100
+   ]
+  },
+  {
+   "between": [
+    "hall",
+    "bathroom"
+   ],
+   "at": [
+    167,
+    358,
+    100
+   ]
+  },
+  {
+   "between": [
+    "hall",
+    "toilet"
+   ],
+   "at": [
+    -54,
+    358,
+    100
+   ]
+  }
+ ]
+}

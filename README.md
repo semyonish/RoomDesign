@@ -1,0 +1,122 @@
+# DesignRenders
+
+Процедурные рендеры интерьеров в Blender (Cycles) из JSON-описания комнаты.
+Blender используется как Python-модуль `bpy` из виртуального окружения, без интерфейса.
+
+## Установка
+
+```sh
+/opt/homebrew/bin/python3.13 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+Для `bpy` 5.2 нужен ровно Python 3.13. Приложение Blender (`brew install --cask blender`)
+нужно только для того, чтобы открывать сохранённые сцены `.blend` и править их руками.
+
+## Рендер
+
+```sh
+.venv/bin/python render.py rooms/apartment.json --preview        # черновик за секунды
+.venv/bin/python render.py rooms/apartment.json                  # проверка: 60% размера, 128 сэмплов
+.venv/bin/python render.py rooms/apartment.json --hd             # 1920×1440, шум как в финале → *_hd.png (~2,5 мин/кадр)
+.venv/bin/python render.py rooms/apartment.json --final          # финал: полный размер → *_final.png
+.venv/bin/python render.py rooms/apartment.json --camera kitchen # только одна камера
+.venv/bin/python render.py rooms/apartment.json --no-render      # только собрать сцену .blend
+.venv/bin/python render.py rooms/apartment.json --light day      # сценарий освещения → папка day/
+.venv/bin/python render.py rooms/apartment.json --cpu            # на процессоре: медленнее, но не ждёт GPU
+```
+
+Результат раскладывается по папкам: `renders/<name>/all/<camera>.png` (всё освещение включено), `renders/<name>/<сценарий или вариант>/<camera>.png` (`day/`, `chandelier/`, `white_joinery/` …), план и аксонометрия — в `renders/<name>/overview/`; сцена — `renders/<name>/<name>.blend`.
+Рендер идёт на GPU через Metal. Первый запуск дольше на 1–2 минуты, пока компилируются ядра.
+
+## Редактор
+
+```sh
+.venv/bin/pip install PySide6
+.venv/bin/python editor.py rooms/apartment.json
+```
+
+Слева палитра: клик по цвету открывает выбор цвета, новый цвет сразу пишется в JSON, и
+черновик выбранной камеры перерендеривается примерно за 4 секунды. Галочка «Без цветов»
+переключает на глиняную схему. «Вернуть цвета» откатывает палитру к состоянию на момент открытия.
+
+## Эскиз плана
+
+```sh
+.venv/bin/python plan_sketch.py                     # plan.json → renders/plan/plan.png
+.venv/bin/python plan_sketch.py --focus bedroom_1   # выделить комнату («в работе»); --crop — ещё и её отдельно
+.venv/bin/python plan_sketch.py --rooms             # вся квартира + каждая комната отдельно: renders/plan/<комната>.png
+```
+
+Двумерный эскиз прямо из `plan.json`, без Blender, за долю секунды: внутренние грани стен, проёмы,
+открывание дверей, длины участков стен между проёмами, площадь замкнутых комнат, мебель (всё, у чего в плане
+есть `footprint`), радиаторы, светильники, выключатели и розетки. Пока комната
+не замкнута, у открытых концов пунктир с «?» — там следующий замер.
+
+## Квартира по плану (`rooms/apartment.json`)
+
+Перенос `plan.json`: размеры в сантиметрах (`"units": "cm"`), координаты те же, что в плане.
+`outline` — стены против часовой стрелки вокруг открытого пространства, внутренняя сторона
+слева от `from → to`. Проёмы, окна и предметы привязаны к стене по `span` — координатам
+концов вдоль неё. Камеры `axo` и `plan` — «кукольный домик» без потолка.
+`--clay` / `--no-clay` включает или выключает глиняные материалы.
+
+## Как устроено (квартира)
+
+- `plan.json` — **главный документ** квартиры: замеры, решения, статусы confirmed/assumed, открытые вопросы.
+  Все решения по дизайну записываются туда.
+- `rooms/apartment.json` — сцена для рендера, перенос `plan.json` (в см). Цвета — в `palette`.
+- Сценарии освещения: `"lighting"` в конфиге. Светильники разбиты на группы по клавишам (`group` у светильника: `hall_1`, `hall_2`, `kitchen_spots`, `sofa_spots`, `tv_spots`; люстра — `chandelier`, карниз — `cornice`, подсветка кухни — `kitchen_led`). Сценарий задаёт включённые группы `on`, `daylight` (дневное небо и солнце), поправки `exposure` / `white_balance` и свои камеры `cameras`. Запуск `--light <имя>` → папка `<имя>/`. В каждом окне стоит световой портал (`roomgen/plan.py`, включается только днём): Cycles берёт небесный свет через окно напрямую, поэтому комнаты без солнца не шумят и не темнеют от ограничения ярких отражений.
+- Варианты: `"variants"` в конфиге, запуск `render.py ... --variant white_joinery` → кадры `*_white_joinery.png`.
+- `textures/` — фото материалов (плитка Amrita для пола и фартука).
+- Модули `roomgen/`: `plan.py` (стены по контуру, проёмы булевыми, окна, потолок, плинтус), `door.py`,
+  `kitchen.py` (гарнитур, стеклянные дверки, ручки, фартук), `furniture.py` (шкаф-купе, тумба, зеркало,
+  пуф, диван, ТВ, шторы — карниз `box` / `concealed` / `slot` (встроенный в натяжной потолок), шкаф в нише), `lights.py` (GX53, люстра), `electrical.py` (AtlasDesign), `materials.py`.
+- Отдельные комнаты за дверями — `extra_rooms`: у каждой свой контур (против часовой), свой пол
+  (`"type": "laminate"`: планка `plank`, фаска `chamfer`, укладка `along` x | y, разбежка `stagger`, например 1/3)
+  и `doorways` — продолжение пола в проём со своей стороны. Стены всех контуров режутся одними проёмами.
+- Мебель спальни (`furniture.py`): `swing_wardrobe` — плечо распашного шкафа (`doors_span` — видимая часть
+  с дверями, `fluted` — рифлёная полоса у start | end, кнобы, добор до потолка), `drawer_unit` — тумба на цоколе или
+  подвесная (полукруглые вырезы-ручки), `bed`, `chair`, `air_conditioner`. Бра — `wall_lights` (группа `sconces`).
+- Розетки: пост `"data"` в `posts` — интернет-розетка RJ45.
+- Не запускать два рендера одновременно: два процесса Cycles на одном GPU падают.
+
+## Конфиг комнаты
+
+Координаты в метрах: X — ширина, Y — глубина, Z — высота, пол на z=0, центр комнаты в (0, 0).
+Стены называются так, как их видно изнутри при взгляде от входа в кадр:
+`back` (дальняя, y = +depth/2), `front`, `left`, `right`.
+
+| Раздел | Что задаёт |
+|---|---|
+| `palette` | именованные цвета; ссылка на цвет — `"@ivory"` |
+| `room` | `width`, `depth`, `height`, `wall_thickness` |
+| `walls` | `finish`: `wallpaper` или `paint`, `color`, `roughness` |
+| `floor` | керамогранит: `color`, `grout_color`, `tile` [м × м], `grout`, `roughness` |
+| `ceiling`, `baseboard` | цвет потолка; плинтус: `enabled`, `height`, `color` |
+| `doors[]` | `kind` (`entrance`/`interior`), `wall`, положение, `width`/`height` полотна (проём на 9 см шире), `color`, `style` (`classic`/`flat`), `handle_side`, `hardware` (`brass`/`chrome`/`black`), `casing` (`simple`/`classic`), `portal` (фриз + карниз, `pilasters`) |
+| `openings[]` | `type: arch` — проём без двери: `wall`, положение, `width`, `height` (`"ceiling"` или метры) |
+| положение | у дверей, арок, тумб и зеркал: `from_left` / `from_right` — зазор от левого/правого края стены (вид изнутри) до края предмета (у двери — до края проёма); без них предмет по центру со сдвигом `offset` |
+| `furniture[]` | `type: cabinet` — подвесная тумба (`width`, `depth`, `height`, `elevation` — высота низа); `type: mirror` — зеркало (`frame`, `frame_width`, `elevation`); `type: wardrobe` — шкаф-купе: `wall`, `anchor` (соседняя стена, в угол с которой он упирается), `length`, `depth`, `height` (`"ceiling"` или метры), `doors`, `color`, `profile` (`champagne`/`brass`/`chrome`/`black`) |
+| `ceiling_lights` | сетка светильников, каждый в центре своей ячейки: `count_x` (по ширине), `count_y` (по глубине), `power` (на лампу), `temperature`. `type: double` — две лампы на плашке: `lamp` (`gx53` — диск на плашке, 120°; `bh53` — два модуля-втяжки ⌀108 заподлицо с потолком; `gu5.3` — спот, `cone`/`blend`), `pair_axis` (`long`/`short`/`x`/`y`). `type: downlight` — одиночный круглый спот. `columns` / `rows` — точные позиции центров (м от левой / от дальней стены) вместо равномерной сетки |
+| `cameras[]` | `name`, `position`, `look_at`, `lens` (мм), `vertical_correction` |
+| `render` | `resolution`, `samples`, `exposure`, `white_balance` (K), `look` |
+
+Значения по умолчанию лежат в `roomgen/config.py`.
+
+## Планы
+
+```sh
+.venv/bin/python plans.py                 # все листы в renders/plan/
+```
+
+Планы мебели и освещения — всей квартиры (`furniture.png`, `lights.png`) и по каждой комнате (`furniture_<комната>.png`, `lights_<комната>.png`). Комнаты, которых ещё нет в `rooms/apartment.json` (например, кабинет), берутся из `plan.json`. На планах освещения светильники окрашены по клавишам, размеры — от стен (у окон — от плоскости штор, края карниза в 25 см от окна) до центров ламп и между лампами (красным); шторы нарисованы — ниша карниза, волна по каждой направляющей, собранные шторы жирнее, а цепочка у окна продолжается до окна отрезком 25 (окно → плоскость штор); чёрным — стены по чистовой отделке: на листах комнат снаружи каждой стены цепочка «угол → края дверей и окон → угол» и полная длина, на общем листе — длина каждой стены внутри комнаты; `plan_guides` в конфиге — линии-ориентиры (стена ТВ через проход). `collage.py` склеивает кадры для сравнения.
+
+## Читаемая копия рендеров
+
+```sh
+.venv/bin/python export.py                               # всё, что отрендерено
+.venv/bin/python export.py --since "2026-10-21 23:30"    # только кадры новее этого времени
+```
+
+Собирает `renders/Рендеры/<Комната>/<NN Сценарий>/<вид (камера)> — глаз|широкий.jpg` с подписью в углу кадра (комната, сценарий, ракурс, объектив) и планы в `renders/Рендеры/Планы/` с русскими названиями. Планы освещения с размерами стен лежат ещё и отдельной папкой `renders/Рендеры/Освещение/` (`00 Вся квартира.png`, `01 Прихожая.png`, …). Технические папки `renders/apartment/…` не трогает; уже собранные и не перерендеренные кадры пропускает.

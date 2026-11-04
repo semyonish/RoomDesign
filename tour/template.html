@@ -1,0 +1,300 @@
+<title>Тур по квартире 360°</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500&display=swap">
+<style>
+/* Layout: the panorama fills the screen; one quiet caption card floats bottom-left, the viewer's own controls top-left. */
+:root {
+  --ink: #101213;                 /* darkroom around the picture */
+  --card: rgba(18, 20, 21, 0.74);
+  --line: rgba(241, 237, 230, 0.14);
+  --text: #f1ede6;
+  --muted: #b8b1a5;
+  --brass: #cfa96b;               /* the living-room chandelier */
+  --halo: rgba(207, 169, 107, 0.3);
+  --shade: rgba(0, 0, 0, 0.35);
+  --key-off: rgba(241, 237, 230, 0.16);
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--body); overflow: hidden; }
+
+/*PANNELLUM_CSS*/
+
+#pano { position: absolute; inset: 0; background: var(--ink); }
+.pnlm-container { background: var(--ink); font-family: var(--body); }
+.pnlm-load-box { background: var(--card); border-radius: 10px; font-family: var(--body); }
+.pnlm-lbar-fill { background: var(--brass); }
+.pnlm-lbar { border-color: var(--brass); }
+.pnlm-panorama-info { display: none !important; }  /* the card names the room */
+.pnlm-controls-container {
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: calc(12px + env(safe-area-inset-left, 0px));
+}
+
+.card {
+  position: absolute; z-index: 5;
+  left: calc(16px + env(safe-area-inset-left, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));  /* with left: never wider than the screen */
+  max-width: 420px;
+  display: grid; gap: 6px; box-sizing: border-box;
+  padding: 14px 16px 13px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.card > * { min-width: 0; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass); }
+h1 { margin: 0; font-family: var(--display); font-weight: 500; font-size: 20px; line-height: 1.2; text-wrap: balance; }
+.meta { font-size: 13px; line-height: 1.45; color: var(--muted); }
+.hint { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.hint b { color: var(--text); font-weight: 500; }
+.card.collapsed .meta, .card.collapsed .hint { display: none; }
+.toggle {
+  all: unset; cursor: pointer; position: absolute; top: 10px; right: 12px;
+  font-size: 12px; color: var(--muted); padding: 2px 4px; border-radius: 4px;
+}
+.toggle:focus-visible { outline: 2px solid var(--brass); }
+.error { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
+
+.rooms { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.rooms button {
+  all: unset; cursor: pointer; font-size: 12.5px; line-height: 1.3; padding: 4px 10px;
+  border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+}
+.rooms button:hover { color: var(--text); }
+.rooms button[aria-current="true"] { background: var(--brass); border-color: var(--brass); color: var(--ink); }
+.rooms button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* A door you can walk through: a brass disc with an arrow, the room's name under it. */
+.door {
+  width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center;
+  background: var(--brass); color: var(--ink);
+  box-shadow: 0 0 0 6px var(--halo), 0 6px 18px var(--shade);
+  transition: box-shadow 0.2s;
+}
+.door:hover { box-shadow: 0 0 0 10px var(--halo), 0 6px 18px var(--shade); }
+.door svg { width: 24px; height: 24px; fill: currentColor; }
+.door .label {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
+  white-space: nowrap; pointer-events: none;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); font: 500 13px/1.3 var(--body);
+}
+/* A step to the next point of the room: a quieter disc than a door, no label. */
+.step {
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center;
+  background: var(--card); color: var(--text); border: 1px solid var(--line);
+  box-shadow: 0 4px 14px var(--shade);
+  transition: background 0.2s;
+}
+.step:hover { background: var(--brass); color: var(--ink); }
+.step svg { width: 20px; height: 20px; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .door, .step { transition: none; } }
+
+/* Light switches: the panel in the card, and the plates on the walls with one rocker per key. */
+.lights { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.lights[hidden] { display: none; }
+.lights .caption { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.lights button {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; line-height: 1.3; padding: 4px 10px 4px 8px;
+  border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+}
+.lights button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--key-off); }
+.lights button[aria-pressed="true"] { color: var(--text); border-color: var(--brass); }
+.lights button[aria-pressed="true"]::before { background: var(--brass); box-shadow: 0 0 6px var(--brass); }
+.lights button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.plate {
+  display: flex; gap: 3px; padding: 4px; border-radius: 7px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 4px 14px var(--shade);
+}
+.plate .key {
+  all: unset; cursor: pointer; width: 22px; height: 32px; border-radius: 4px;
+  background: var(--key-off); box-shadow: inset 0 0 0 1px var(--line);
+}
+.plate .key[aria-pressed="true"] { background: var(--brass); box-shadow: 0 0 12px var(--halo); }
+.plate .key:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+</style>
+
+<div id="pano" role="img" aria-label="Панорамы 360° квартиры"></div>
+
+<section class="card" id="card">
+  <button class="toggle" id="toggle" type="button" aria-expanded="true">свернуть</button>
+  <div class="eyebrow" id="quality">360°</div>
+  <h1 id="room">Квартира</h1>
+  <nav class="rooms" id="rooms" aria-label="Комнаты"></nav>
+  <div class="lights" id="lights" role="group" aria-label="Свет" hidden></div>
+  <div class="meta" id="meta">Вечер, весь свет. Глаза на высоте 160 см.</div>
+  <div class="hint"><b>Тяните</b>, чтобы осмотреться · <b>колесо или щипок</b> — приблизить · <b>стрелка на двери</b> — перейти в комнату · <b>выключатель на стене</b> — свет</div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
+<script>
+// Rooms, their points (one cube panorama each), the doors between rooms and the steps between a room's points,
+// computed by tour/build.py from the room config. A room with switches gives each point one panorama per on/off
+// combination of its keys ("variants": a mask with a 1 per key that is on); flipping a key loads that combination
+// with the same view, so the light changes in place, and it stays so at the room's other points.
+const TOUR = /*TOUR*/;
+
+const card = document.getElementById("card");
+const toggle = document.getElementById("toggle");
+function collapse(collapsed) {
+  card.classList.toggle("collapsed", collapsed);
+  toggle.textContent = collapsed ? "подробнее" : "свернуть";
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+}
+toggle.addEventListener("click", () => collapse(!card.classList.contains("collapsed")));
+if (innerWidth < 600) collapse(true);  // a phone keeps the room's name and the room buttons
+
+// A flat screen shows a wide view the way a wide lens does, stretching the edges. Views are measured on the screen's
+// diagonal, so a laptop and a portrait phone feel alike: 100° is about 90° across a laptop (95° was too stretched on
+// phones, 74° across felt too close).
+const VIEW = 100, WIDEST = 120, CLOSEST = 40;
+function hfov(deg) {  // the viewer's field of view is horizontal: the share of the diagonal the width takes
+  const k = innerWidth / Math.hypot(innerWidth, innerHeight);
+  return 2 * Math.atan(Math.tan(deg * Math.PI / 360) * k) * 180 / Math.PI;
+}
+
+// Phones get the 1024 px faces: the 2048 ones need ~100 MB of video memory per room.
+const PHONE = matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 820;
+const lights = {};  // room → its current mask, kept while you walk around
+const point = id => id.split("~")[0];
+const roomOf = p => TOUR.scenes[p].room;
+const sceneId = (p, mask) => {
+  const sw = TOUR.rooms[roomOf(p)].switches;
+  return !sw || mask === sw.default ? p : `${p}~${mask}`;
+};
+const facesOf = (p, mask) => {
+  const s = TOUR.scenes[p], v = s.variants ? s.variants[mask] : s;
+  return PHONE ? v.facesMobile : v.faces;
+};
+let viewer = null;
+
+function enter(p, pitch, yaw) {  // to a point, the room's lights as you left them
+  viewer.loadScene(sceneId(p, lights[roomOf(p)]), pitch, yaw, "same");
+}
+
+function flip(r, key) {
+  const m = lights[r].split("");
+  m[key] = m[key] === "1" ? "0" : "1";
+  lights[r] = m.join("");
+  showLights(r);
+  viewer.loadScene(sceneId(point(viewer.getScene()), lights[r]), "same", "same", "same");
+}
+
+function noDrag(el) {  // pressing a control must not start turning the panorama
+  for (const ev of ["mousedown", "touchstart", "pointerdown"]) el.addEventListener(ev, e => e.stopPropagation());
+}
+
+const ARROW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l-7 7h4.5v8h5v-8H19z"/></svg>';
+
+function doorTip(div, title) {
+  div.innerHTML = ARROW + '<span class="label"></span>';
+  div.querySelector(".label").textContent = title;
+  div.title = "Перейти: " + title;
+}
+
+function stepTip(div) {
+  div.innerHTML = ARROW;
+  div.title = "Шаг";
+}
+
+function plateTip(div, [r, keys, mask]) {  // a switch on the wall: one rocker per key it carries
+  div.title = "Выключатель";
+  for (const k of keys) {
+    const b = document.createElement("button");
+    const key = TOUR.rooms[r].switches.keys[k];
+    b.type = "button";
+    b.className = "key";
+    b.setAttribute("aria-pressed", String(mask[k] === "1"));
+    b.setAttribute("aria-label", key.label + (key.hint ? ": " + key.hint : ""));
+    b.title = b.getAttribute("aria-label");
+    noDrag(b);
+    b.addEventListener("click", e => { e.stopPropagation(); flip(r, k); });
+    div.append(b);
+  }
+}
+
+const scenes = {};
+for (const [r, room] of Object.entries(TOUR.rooms)) if (room.switches) lights[r] = room.switches.default;
+for (const [id, s] of Object.entries(TOUR.scenes)) {
+  const masks = s.variants ? Object.keys(s.variants) : [undefined];
+  for (const mask of masks) {
+    const hotSpots = [
+      ...s.doors.map(d => ({ type: "info", yaw: d.yaw, pitch: d.pitch, cssClass: "door", createTooltipFunc: doorTip,
+                             createTooltipArgs: TOUR.rooms[d.room].title, clickHandlerFunc: () => enter(d.to, -5, d.targetYaw) })),
+      ...s.steps.map(st => ({ type: "info", yaw: st.yaw, pitch: st.pitch, cssClass: "step", createTooltipFunc: stepTip,
+                              clickHandlerFunc: () => enter(st.to, "same", "same") })),  // a room's points look one way
+      ...(s.panels || []).map(p => ({ type: "info", yaw: p.yaw, pitch: p.pitch, cssClass: "plate",
+                                      createTooltipFunc: plateTip, createTooltipArgs: [s.room, p.keys, mask] })),
+    ];
+    scenes[sceneId(id, mask)] = { title: TOUR.rooms[s.room].title, type: "cubemap", cubeMap: facesOf(id, mask),
+                                  yaw: 0, pitch: -5, hotSpots };
+  }
+}
+
+function showLights(r) {  // the light panel of the card: one toggle per key
+  const panel = document.getElementById("lights"), sw = TOUR.rooms[r].switches;
+  panel.hidden = !sw;
+  panel.replaceChildren();
+  if (!sw) return;
+  const caption = document.createElement("span");
+  caption.className = "caption";
+  caption.textContent = "Свет";
+  panel.append(caption);
+  sw.keys.forEach((key, k) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = key.label;
+    if (key.hint) b.title = key.hint;
+    b.setAttribute("aria-pressed", String(lights[r][k] === "1"));
+    b.addEventListener("click", () => flip(r, k));
+    panel.append(b);
+  });
+}
+
+function show(id) {  // card text, the current room's button and its lights
+  const p = point(id), r = roomOf(p);
+  document.getElementById("room").textContent = TOUR.rooms[r].title;
+  document.getElementById("quality").textContent = "360° · " + TOUR.scenes[p].quality;
+  for (const b of document.querySelectorAll(".rooms button")) b.setAttribute("aria-current", String(b.dataset.id === r));
+  document.getElementById("meta").textContent = TOUR.rooms[r].switches
+    ? "Свет включайте кнопками ниже или выключателями на стенах. Глаза на высоте 160 см."
+    : "Вечер, весь свет. Глаза на высоте 160 см.";
+  showLights(r);
+}
+
+const firstRoom = TOUR.rooms[location.hash.slice(1)] ? location.hash.slice(1) : TOUR.first;
+const first = TOUR.rooms[firstRoom].main;
+if (window.pannellum) {
+  viewer = pannellum.viewer("pano", {
+    default: { firstScene: sceneId(first, lights[firstRoom]), autoLoad: true, showZoomCtrl: true, showFullscreenCtrl: true,
+               hfov: hfov(VIEW), minHfov: hfov(CLOSEST), maxHfov: hfov(WIDEST), sceneFadeDuration: 600 },
+    scenes,
+  });
+  const nav = document.getElementById("rooms");
+  for (const [r, room] of Object.entries(TOUR.rooms)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.id = r; b.textContent = room.title;
+    b.addEventListener("click", () => { if (roomOf(point(viewer.getScene())) !== r) enter(room.main); });
+    nav.append(b);
+  }
+  show(first);
+  viewer.on("scenechange", show);
+  window.tourViewer = viewer;  // for checks from the console
+  const portrait = matchMedia("(orientation: portrait)");
+  (portrait.addEventListener ? portrait.addEventListener.bind(portrait, "change") : portrait.addListener.bind(portrait))(() => {  // turning the phone: refit, not on every resize
+    viewer.setHfovBounds([hfov(CLOSEST), hfov(WIDEST)]);
+    viewer.setHfov(hfov(VIEW), false);
+  });
+} else {
+  document.getElementById("pano").innerHTML = '<div class="error">Не загрузился просмотрщик панорам. Обновите страницу.</div>';
+}
+</script>
