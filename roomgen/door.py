@@ -118,6 +118,15 @@ class Door:
             return self.cfg["floor_depth"]
         return self.rd if self.entrance else self.rd + self.lt / 2
 
+    def floor_depths(self):
+        """The floor patch's depth at both ends of the opening: up to a straight tile joint `floor_to` (a plan x or y)
+        across a skewed wall, else floor_depth at both."""
+        c = self.cfg.get("floor_to")
+        if c is None:
+            return self.floor_depth, self.floor_depth
+        k = 0 if abs(self.f.nrm.x) > abs(self.f.nrm.y) else 1
+        return tuple((self.f.world(s, 0.0, 0.0)[k] - c) / self.f.nrm[k] for s in (self.s0, self.s1))
+
     @property
     def footprint(self):
         """Span along the wall occupied at floor level; the baseboard stops here."""

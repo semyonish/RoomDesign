@@ -221,7 +221,7 @@ class Model:
             for dr in cfg["doors"]:
                 rd = dr.get("reveal_depth", 10)
                 fd = dr.get("floor_depth", rd if dr.get("kind") == "entrance" else rd + dr.get("leaf_thickness", 4) / 2)
-                polys.append(self.patch(self.walls[dr["wall"]], dr["span"], fd))
+                polys.append(self.patch(self.walls[dr["wall"]], dr["span"], fd, dr.get("floor_to")))
             self.tiles.append((tuple(fl.get("origin", (0, 0))), tuple(fl["tile"]), polys))
             self.tiled_rooms |= {"hall", "kitchen_living"}
         for r in cfg.get("extra_rooms", []):
@@ -238,9 +238,11 @@ class Model:
                           if (r.get("walls") or {}).get("finish") == "tile" for w in r["outline"]}
 
     @staticmethod
-    def patch(w, span, depth):  # floor running into a doorway, from the wall face `depth` into the opening
-        s0, s1 = sorted(w.s(c) for c in span)
-        return [w.pt(s0), w.pt(s1), w.pt(s1, -depth), w.pt(s0, -depth)]
+    def patch(w, span, depth, to=None):  # floor running into a doorway, from the wall face `depth` into the opening,
+        s0, s1 = sorted(w.s(c) for c in span)   # or up to a straight tile joint `to` (a plan x or y) across a skewed wall
+        k = 0 if abs(w.n[0]) > abs(w.n[1]) else 1
+        d0, d1 = [(w.pt(s)[k] - to) / w.n[k] for s in (s0, s1)] if to is not None else (depth, depth)
+        return [w.pt(s0), w.pt(s1), w.pt(s1, -d1), w.pt(s0, -d0)]
 
     def tile_zone(self, x, y):
         return next((z for z in self.tiles if any(in_polygon(x, y, p) for p in z[2])), None)

@@ -268,7 +268,7 @@ LENGTH_KEYS = {
     "countertop_outline", "tile_origin", "origin", "niche_width", "niche_depth", "connection_at",
     "frame_width", "pair_spacing", "drop", "diameter", "tile", "grout", "wall_thickness",
     "frieze_height", "pilaster_width", "pilaster_depth", "slot_width", "slot_offset", "bar", "bar_spacing", "stagger", "proud", "tracks", "center", "size", "radius", "reach", "rise",
-    "plank", "chamfer", "doors_span", "flute_width", "knob_z", "mattress", "headboard", "frame_height", "overlap", "floor_depth", "handle_z", "desk_height", "monitor_offset", "laptop_offset", "cutout", "tiers", "hbar_z",
+    "plank", "chamfer", "doors_span", "flute_width", "knob_z", "mattress", "headboard", "frame_height", "overlap", "floor_depth", "floor_to", "handle_z", "desk_height", "monitor_offset", "laptop_offset", "cutout", "tiers", "hbar_z",
     "finish_depth", "past_ends", "kick", "niche_height", "band", "inset", "door", "clip_start",
     "hooks", "rail", "kick_span", "rain", "outer_round", "frame_depth", "setback", "wing_width", "rim", "front_rim", "drain",
 }

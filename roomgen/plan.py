@@ -149,8 +149,9 @@ def build_shell(cfg, frames, doors, arch, ceiling_col, cutters):
     floor = geo.prism("Floor", [w["from"] for w in outline], -0.05, 0.0, floor_mat, arch)
     for i, dr in enumerate(doors):
         f = dr.f
-        geo.frame_box(f"Floor Doorway {i + 1}", f, dr.s0, 0.001, -0.05, dr.s1, -dr.floor_depth, 0.0,
-                      floor_mat, arch).parent = floor
+        d0, d1 = dr.floor_depths()
+        pts = [f.world(dr.s0, 0.001, 0.0), f.world(dr.s1, 0.001, 0.0), f.world(dr.s1, -d1, 0.0), f.world(dr.s0, -d0, 0.0)]
+        geo.prism(f"Floor Doorway {i + 1}", [(p.x, p.y) for p in pts], -0.05, 0.0, floor_mat, arch).parent = floor
     for room in cfg.get("extra_rooms", []):
         # Its own floor; from its side the doorway gets the rest of the wall depth, up to the main floor's patch.
         rf = room["floor"]

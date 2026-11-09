@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Расчёт материалов</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --ink: #1d1b19; --muted: #6b645c; --line: #d9d3ca; --soft: #f4f1ec; --accent: #8a6a3f; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10pt;
+         line-height: 1.4; margin: 0; background: #fff; }
+  h1 { font-size: 19pt; margin: 0 0 2pt; letter-spacing: -0.2pt; }
+  .sub { color: var(--muted); margin-bottom: 12pt; }
+  h2 { font-size: 13pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid var(--ink); }
+  h2 .n { color: var(--accent); margin-right: 4pt; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6pt; margin: 4pt 0 6pt; }
+  .card { background: var(--soft); border-radius: 4pt; padding: 8pt 9pt; }
+  .card .k { font-size: 8.5pt; color: var(--muted); }
+  .card .v { font-size: 18pt; font-weight: 700; margin: 2pt 0 1pt; white-space: nowrap; }
+  .card .v small { font-size: 11pt; font-weight: 600; }
+  .card .d { font-size: 8pt; color: var(--muted); line-height: 1.3; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 6pt; }
+  th, td { padding: 3.5pt 6pt; border-bottom: 0.6pt solid var(--line); vertical-align: top; }
+  th { text-align: left; font-size: 8.5pt; color: var(--muted); font-weight: 600; border-bottom: 1pt solid var(--ink); }
+  td.r, th.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tr.total td { font-weight: 700; border-top: 1pt solid var(--ink); border-bottom: none; }
+  ul { margin: 4pt 0 4pt 0; padding-left: 14pt; break-inside: avoid; }
+  li { margin: 2pt 0; }
+  .note { font-size: 8.5pt; color: var(--muted); }
+  .flag { border-left: 2.5pt solid var(--accent); padding: 4pt 8pt; background: #faf6ef; margin: 6pt 0; font-size: 9pt; }
+  .keep { break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>Расчёт материалов: потолок, обои, плитка</h1>
+<div class="sub">Квартира, по plan.json и 3D-модели (rooms/apartment.json) · 4 ноября 2026</div>
+
+<div class="summary">
+  <div class="card"><div class="k">Профиль натяжного потолка</div><div class="v">106,9 <small>м</small></div>
+    <div class="d">с запасом ≈ 118 м</div></div>
+  <div class="card"><div class="k">Полотно натяжного потолка</div><div class="v">85,5 <small>м²</small></div>
+    <div class="d">9 помещений, с лоджиями</div></div>
+  <div class="card"><div class="k">Обои</div><div class="v">129,2 <small>м²</small></div>
+    <div class="d">21 рулон 1,06 × 10 м по раскладке; без стен за шкафами и кухней</div></div>
+  <div class="card"><div class="k">Плитка Amrita 60×120</div><div class="v">72,0 <small>м²</small></div>
+    <div class="d">112 плиток по раскладке, ≈ 118 с запасом; + Duna за ванной 3,68 м² — 6 плиток</div></div>
+</div>
+
+<h2><span class="n">1</span>Натяжной потолок</h2>
+<table class="keep">
+  <tr><th>Помещение</th><th class="r">Полотно, м²</th><th class="r">Профиль по стенам, м</th></tr>
+  <tr><td>Прихожая (до шва)</td><td class="r">12,27</td><td class="r">13,11</td></tr>
+  <tr><td>Кухня-гостиная (с нишей шкафа)</td><td class="r">18,57</td><td class="r">17,14</td></tr>
+  <tr><td>Спальня 1</td><td class="r">15,88</td><td class="r">16,54</td></tr>
+  <tr><td>Кабинет</td><td class="r">12,92</td><td class="r">16,04</td></tr>
+  <tr><td>Спальня 2</td><td class="r">14,58</td><td class="r">15,64</td></tr>
+  <tr><td>Ванная (по плитке)</td><td class="r">3,31</td><td class="r">7,28</td></tr>
+  <tr><td>Туалет (по плитке)</td><td class="r">2,74</td><td class="r">6,67</td></tr>
+  <tr><td>Лоджия кухни-гостиной</td><td class="r">2,62</td><td class="r">7,28</td></tr>
+  <tr><td>Лоджия спальни 1</td><td class="r">2,60</td><td class="r">7,24</td></tr>
+  <tr class="total"><td>Итого</td><td class="r">85,5</td><td class="r">106,9</td></tr>
+</table>
+<ul>
+  <li><b>Теневой профиль по периметру:</b> 106,9 м, с запасом 10% ≈ 118 м. Углов: 38 внутренних и 6 внешних
+    (короб стояка, два края ниши, два угла простенка у арки, угол стены у арки, ниша шкафа в кабинете).</li>
+  <li><b>Разделительный профиль</b> (шов полотен прихожая / гостиная, y = −16): 1,07 м.</li>
+  <li><b>Встроенный карниз:</b> 15,05 м — окна 13,27 м (гостиная 3,90, спальня 1 3,03, кабинет 3,27, спальня 2 3,07)
+    и карниз над ванной 1,78 м. LED-лента только в карнизе гостиной — 3,9 м.</li>
+  <li><b>Закладные:</b> 40 корпусов BH53, 70 ламп (прихожая 6, кухня-гостиная 7, спальня 1 6, кабинет 4,
+    спальня 2 6, ванная 4, туалет 3, лоджии по 2), люстра — 1, вентиляторы — 2.</li>
+</ul>
+
+<h2><span class="n">2</span>Стены под обои</h2>
+<table class="keep">
+  <tr><th>Комната</th><th class="r">Периметр, м</th><th class="r">Стены без проёмов, м²</th><th class="r">Под обои (видимые), м²</th></tr>
+  <tr><td>Прихожая</td><td class="r">13,27</td><td class="r">24,33</td><td class="r">16,23</td></tr>
+  <tr><td>Кухня-гостиная</td><td class="r">16,98</td><td class="r">41,75</td><td class="r">24,20</td></tr>
+  <tr><td>Спальня 1</td><td class="r">16,54</td><td class="r">38,60</td><td class="r">29,90</td></tr>
+  <tr><td>Кабинет</td><td class="r">16,04</td><td class="r">37,93</td><td class="r">28,48</td></tr>
+  <tr><td>Спальня 2</td><td class="r">15,64</td><td class="r">36,85</td><td class="r">30,36</td></tr>
+  <tr class="total"><td>Итого</td><td class="r">78,5</td><td class="r">179,5</td><td class="r">129,2</td></tr>
+</table>
+<ul>
+  <li><b>Высота</b> 270 см (от пола до перекрытия). Если натяжной потолок опустится на 5 см, видимая площадь
+    уменьшится примерно на 3 м².</li>
+  <li><b>Проёмы вычтены:</b> двери на высоту проёма 217 см, окна и балконные двери целиком.</li>
+  <li><b>«Видимые»</b> — дополнительно без стен за мебелью до потолка: шкафы-купе, распашные шкафы,
+    кухня с колонной холодильника, шкаф в нише кухни.</li>
+  <li><b>Не учтено:</b> откосы и перемычка над аркой (арка считается проходом до потолка, как в 3D;
+    если над ней есть перемычка — добавить её площадь).</li>
+  <li><b>Рулоны</b> (обои под покраску 1,06 × 10 м, полоса 270 + 10 = 280): по раскладке 21 рулон — прихожая с
+    кухней-гостиной 7, спальня 1 — 5, кабинет 4, спальня 2 — 5; если остатки переносить между комнатами — 19.
+    Рулон 0,53 × 10 м — 34. Каждая полоса пронумерована — «Раскладка обоев.pdf».</li>
+</ul>
+
+<h2><span class="n">3</span>Покраска стен лоджий</h2>
+<table class="keep">
+  <tr><th>Лоджия</th><th class="r">Периметр, м</th><th class="r">Стены, м²</th><th class="r">Проёмы, м²</th><th class="r">Под покраску, м²</th></tr>
+  <tr><td>Лоджия кухни-гостиной</td><td class="r">7,28</td><td class="r">19,66</td><td class="r">7,23</td><td class="r">12,42</td></tr>
+  <tr><td>Лоджия спальни 1</td><td class="r">7,24</td><td class="r">19,55</td><td class="r">7,53</td><td class="r">12,02</td></tr>
+  <tr class="total"><td>Итого</td><td class="r">14,5</td><td class="r">39,2</td><td class="r">14,8</td><td class="r">24,4</td></tr>
+</table>
+<ul>
+  <li><b>Отделка:</b> стены крашеные, слоновая кость. Высота принята 270 см, как в комнатах.</li>
+  <li><b>Проёмы вычтены:</b> окно лоджии 185 × 185 и со стороны комнаты балконная дверь с окном.</li>
+  <li><b>Размеры лоджий примерные</b> (со слов, 24.10). Окно гостиной заходит на 16 см за боковую стенку лоджии
+    (окно до y −121, стенка на y −137), поэтому у лоджии кухни вычтено меньше — размеры стоит проверить замером.</li>
+</ul>
+
+<h2><span class="n">4</span>Плитка — Global Tile Amrita 60×120 и Duna за ванной</h2>
+<table class="keep">
+  <tr><th>Зона</th><th class="r">м²</th><th class="r">Плиток по раскладке</th></tr>
+  <tr><td>Пол прихожей и кухни-гостиной, с заходами в проёмы (0,33)</td><td class="r">31,17</td><td class="r">47</td></tr>
+  <tr><td>Пол лоджий (2,62 + 2,60)</td><td class="r">5,22</td><td class="r">10</td></tr>
+  <tr><td>Ванная: пол без пола под ванной и коробами (с нишей под экраном)</td><td class="r">1,91</td><td class="r" rowspan="4">24</td></tr>
+  <tr><td>Ванная: стены, кроме стены за ванной</td><td class="r">10,80</td></tr>
+  <tr><td>Ванная: короба — лицо, верх, торец</td><td class="r">1,39</td></tr>
+  <tr><td>Ванная: экран ванны с подступенком</td><td class="r">1,03</td></tr>
+  <tr><td>Туалет: пол, кроме пола под коробом</td><td class="r">2,46</td><td class="r" rowspan="3">27</td></tr>
+  <tr><td>Туалет: стены до потолка</td><td class="r">13,67</td></tr>
+  <tr><td>Туалет: лицевая сторона короба (верх — без плитки)</td><td class="r">1,77</td></tr>
+  <tr><td>Фартук кухни (4,26 м × 0,6)</td><td class="r">2,56</td><td class="r">4</td></tr>
+  <tr class="total"><td>Итого Amrita</td><td class="r">72,0</td><td class="r">112</td></tr>
+  <tr><td>Duna Magnum White Carving 60×120 — стена за ванной от борта (60) до потолка</td><td class="r">3,68</td><td class="r">6</td></tr>
+</table>
+<ul>
+  <li><b>Стены санузлов</b> — высота 267 см (в туалете принята как в ванной). Без плитки: дверь, ниже борта за ванной
+    (2,01 м²), стена за коробами, верх короба туалета (на нём шкаф).</li>
+  <li><b>Штуки — по полной раскладке</b> («Раскладка плитки.pdf»: каждый кусок пронумерован номером плитки, из которой
+    вырезан): 112 плиток Amrita, если обрезки идут в дело в своей комнате; 107 — если носить их между комнатами.
+    С запасом ≈ 5% на бой — <b>≈ 118 плиток (≈ 85 м²)</b>. Duna — 6 плиток, с запасом 7.</li>
+  <li><b>Проёмы прихожей:</b> во входной двери плитка заходит на 8 см; в проёмах кабинета, спальни 2 и спальни 1 —
+    целая плитка до шва x −112,2 / 247,8 (стена прихожей косая: кабинет 6,9–7,9 см, спальня 2 8,2–9,1, спальня 1 7,8).</li>
+  <li><b>Можно сэкономить 11 плиток</b> (тогда 101), если не класть плитку за шкафами до потолка: туалет — за колонной
+    стиралки и сушилки и за шкафом над коробом (9), ванная — за пеналом (2).</li>
+  <li><b>Пол под кухней и шкафом-купе</b> в прихожей включён в площадь; пол в проёмах балконных дверей (порог в лоджию) не считан.</li>
+</ul>
+<div class="flag">Фартук под вопросом: в 3D и в заметке про короб стояка он из плитки, а в finishes записан как
+  «светлая панель (assumed)». Если будет панель — вычесть 2,56 м² и 4 плитки (№ 109–112).</div>
+
+</body>
+</html>

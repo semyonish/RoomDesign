@@ -152,6 +152,12 @@ class Surface:
                                     area=len(rr) * STEP ** 2, lu=gu[c0 + lc], lv=gv[r0 + lr],
                                     opt=float(self.optmask[r0:r1, c0:c1][comp].sum()) * STEP ** 2))
                     ids[r0:r1, c0:c1][comp] = len(out)
+        snap_u, snap_v = self.edges()
+        for p in out:   # the raster finds an edge to half a step: snap it onto the joint or wall it lies on
+            for k, cands in (("u0", snap_u), ("u1", snap_u), ("v0", snap_v), ("v1", snap_v)):
+                c = min(cands, key=lambda c: abs(c - p[k]))
+                if abs(c - p[k]) <= STEP * 0.6:
+                    p[k] = c
         out, ids = merge_slivers(out, ids)
         for p in out:
             p["w"], p["h"] = p["u1"] - p["u0"], p["v1"] - p["v0"]
@@ -159,6 +165,23 @@ class Surface:
         if not opt_out:
             self.pieces, self.ids = out, ids
         return out
+
+
+def _edges(self):
+    """Where piece edges can lie exactly: the joints, and the edges of the surface and what is cut out of it."""
+    u0, u1, v0, v1 = self.bounds
+    us = {self.origin[0] + k * TW for k in range(math.floor((u0 - self.origin[0]) / TW), math.ceil((u1 - self.origin[0]) / TW) + 1)}
+    vs = {self.origin[1] + k * TH for k in range(math.floor((v0 - self.origin[1]) / TH), math.ceil((v1 - self.origin[1]) / TH) + 1)}
+    for r in self.region + self.excl + self.opt:
+        us |= {r[0], r[1]}
+        vs |= {r[2], r[3]}
+    for poly in (self.polys or []) + list(self.minus):
+        us |= {q[0] for q in poly}
+        vs |= {q[1] for q in poly}
+    return sorted(us), sorted(vs)
+
+
+Surface.edges = _edges
 
 
 def merge_slivers(pieces, ids):
