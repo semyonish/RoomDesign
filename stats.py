@@ -65,24 +65,11 @@ for win in cfg["windows"]:
         s0, s1 = sorted(w.s(c) for c in p["span"])
         openings.setdefault(w.id, []).append((s0, s1, p["z"][0], p["z"][1]))
 
-# ---------------- full-height furniture covering walls (dry rooms) ----------------
-cover_spec = {
-    "hall_right": [(0, 240, "шкаф-купе")],
-    "entrance": [(180, 240, "бок шкафа-купе")],
-    "kitchen": [(-402, -111.2, "кухня")],
-    "sofa": [(-181.8, -20, "кухня + колонна холодильника")],
-    "riser_side": [(-422, -402, "короб стояка за кухней")],
-    "riser_front": [(-20, 0, "короб стояка за кухней")],
-    "br1_door": [(367, 549, "шкаф")],
-    "br1_head": [(254, 394.3, "шкаф")],
-    "st_pocket_end": [(-567, -477, "шкаф-купе в нише")],
-    "st_pocket_side": [(-97, -27, "бок шкафа-купе")],
-    "st_door": [(-24, 106, "шкаф")],
-    "st_left": [(-179, -119, "бок шкафа")],
-    "b2_door": [(371, 551, "шкаф")],
-    "b2_right": [(-179.4, -119, "бок шкафа")],
-}
-NICHE = ["niche_step", "niche_side", "niche_top", "niche_jog", "pier_back"]  # behind the niche cabinet, to the ceiling
+# ---------------- the kitchen backsplash: the only wall without wallpaper (behind cabinets it is papered) ----------------
+K = cfg["kitchen"]
+splash_spec = {b["wall"]: b["span"] for b in K["backsplash"]}   # countertop to the upper cabinets
+SPLASH_Z = (K["base_top"], K["upper"]["bottom"])
+NICHE = ["niche_step", "niche_side", "niche_top", "niche_jog", "pier_back"]   # the niche of the kitchen-living room
 
 rooms_dry = {
     "Прихожая": ["entrance", "hall_right", "hall_right_br1", "hall_far", "hall_left", "pier_end"],
@@ -103,9 +90,7 @@ for name, wids in rooms_dry.items():
         w = W[wid]
         L = w.len
         ops = [clip(r, L, H_DRY) for r in openings.get(wid, [])]
-        covs = [(*s_of(w, a, b), 0, H_DRY) for a, b, _ in cover_spec.get(wid, [])]
-        if wid in NICHE:
-            covs = [(0, L, 0, H_DRY)]
+        covs = [(*s_of(w, *splash_spec[wid]), *SPLASH_Z)] if wid in splash_spec else []
         a_op = rect_union(ops)
         a_free = L * H_DRY - rect_union(ops + covs)
         g += L * H_DRY
@@ -116,13 +101,13 @@ for name, wids in rooms_dry.items():
     net = g - op
     cov = net - vis
     print(f"\n{name}: периметр {per/100:.2f} м | стены {g/1e4:.2f} | проёмы {op/1e4:.2f} | за вычетом проёмов {net/1e4:.2f} "
-          f"| закрыто мебелью {cov/1e4:.2f} | под обои (видимое) {vis/1e4:.2f}")
+          f"| фартук {cov/1e4:.2f} | под обои {vis/1e4:.2f}")
     for wid, L, a_op, n, v in rows:
-        print(f"   {wid:16s} L={L:6.1f}  проёмы {a_op/1e4:5.2f}  нетто {n/1e4:5.2f}  видимое {v/1e4:5.2f}")
+        print(f"   {wid:16s} L={L:6.1f}  проёмы {a_op/1e4:5.2f}  нетто {n/1e4:5.2f}  под обои {v/1e4:5.2f}")
     for k, v in zip(("gross", "op", "net", "cov", "vis", "perim"), (g, op, net, cov, vis, per)):
         tot[k] += v
 print(f"\nИТОГО: периметр {tot['perim']/100:.2f} м | стены {tot['gross']/1e4:.2f} | проёмы {tot['op']/1e4:.2f} | "
-      f"нетто {tot['net']/1e4:.2f} | закрыто {tot['cov']/1e4:.2f} | видимое {tot['vis']/1e4:.2f}")
+      f"нетто {tot['net']/1e4:.2f} | фартук {tot['cov']/1e4:.2f} | под обои {tot['vis']/1e4:.2f}")
 
 # loggias: painted walls; the room-side wall has the balcony door and window of the room (behind insulation)
 print("\n" + "=" * 30, "ПОКРАСКА ЛОДЖИЙ (высота", H_DRY, ")")

@@ -174,78 +174,15 @@ def tiles(tmp):
     build("Раскладка плитки", "Раскладка плитки", html, numbered("Раскладка плитки"), tmp)
 
 
-def plural(n, one, few, many):
-    if n % 10 == 1 and n % 100 != 11:
-        return one
-    return few if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else many
-
-
-VISIBLE = {"54355-3": 100.69, "54355-7": 28.48}   # m² of wall under wallpaper, from stats.py
-
-
 def wallpaper(tmp):
+    """«Раскладка обоев» — its own layout (A4 landscape, vector drawings): wallpaper_pdf.py."""
+    import wallpaper_pdf
     w = json.loads((ROOT / "renders/layout/wallpaper.json").read_text())
-    W, L = w["width"] / 100, w["length"] / 100
-    size = f"{c(W)} × {c(L)} м"
-    word = lambda n: plural(n, "рулон", "рулона", "рулонов")
-    rolls = lambda n: f'{n} <small>{word(n)}</small>'
-
-    def row(r, cls="", art=True):
-        return (f'<tr class="{cls}"><td>{r["name"]}</td><td>{r["article"] if art else ""}</td>'
-                f'<td class="r">Р{r["first"]}–Р{r["last"]}</td><td class="r">{r["strips"]}</td>'
-                f'<td class="r">{r["pieces"]}</td><td class="r">{c(r["cut"])}</td><td class="r">{r["rolls"]}</td></tr>')
-    rows = ""
-    for a in w["articles"]:
-        rs = [r for r in w["rooms"] if r["article"] == a["article"]]
-        rows += "".join(row(r) for r in rs)
-        if len(rs) > 1:
-            rows += row(dict(a, name=f'Итого {a["article"]}', pieces=sum(r["pieces"] for r in rs)), "total", art=False)
-    A = {a["article"]: a for a in w["articles"]}
-    a3, a7 = A["54355-3"], A["54355-7"]
-    narrow = [(r["name"].lower(), r["list"][-1]) for r in w["rooms"]
-              if len(r["list"][-1]["pieces"]) == 1 and r["list"][-1]["rest"] > 500]
-    narrow = ", ".join(f'{n} — Р{l["roll"]} (полоса {l["pieces"][0]["strip"]}, {c(l["pieces"][0]["width"], 0)} см)'
-                       for n, l in narrow)
-    html = f"""
-<h1>Раскладка обоев</h1>
-<div class="sub">{w["product"]}, рулон {size}, однотонные, раппорт 0 · кабинет — 54355-7, остальные комнаты — 54355-3 ·
-  каждая полоса пронумерована, с рулоном, из которого режется · {DATE}</div>
-<div class="summary">
-  <div class="card"><div class="k">54355-3 — прихожая, кухня-гостиная, спальни 1 и 2</div><div class="v">{rolls(a3["rolls"])}</div>
-    <div class="d">Р{a3["first"]}–Р{a3["last"]} · стены {c(VISIBLE["54355-3"], 1)} м² · с переносом остатков между
-      комнатами — {a3["rolls_shared"]}</div></div>
-  <div class="card"><div class="k">54355-7 — кабинет</div><div class="v">{rolls(a7["rolls"])}</div>
-    <div class="d">Р{a7["first"]}–Р{a7["last"]} · стены {c(VISIBLE["54355-7"], 1)} м²</div></div>
-  <div class="card"><div class="k">Всего по раскладке</div><div class="v">{rolls(w["rolls"])}</div>
-    <div class="d">{size}; каждая комната — из своих рулонов</div></div>
-</div>
-<h2>По комнатам</h2>
-<table>
-  <tr><th>Комната</th><th>Артикул</th><th class="r">Рулоны</th><th class="r">Полос</th><th class="r">Кусков</th><th class="r">Отрезано, м²</th><th class="r">Рулонов</th></tr>
-  {rows}
-  <tr class="total"><td>Всего</td><td></td><td class="r">Р1–Р{w["rolls"]}</td><td class="r">{sum(r["strips"] for r in w["rooms"])}</td>
-    <td class="r">{sum(r["pieces"] for r in w["rooms"])}</td><td class="r">{c(sum(r["cut"] for r in w["rooms"]))}</td><td class="r">{w["rolls"]}</td></tr>
-</table>
-<ul>
-  <li><b>Полоса</b> — высота стены 270 + 10 на подрезку = 280 см, из рулона {c(L)} м выходят 3 полосы и остаток 165:
-    он идёт на куски над дверями (63) и под окнами (88). Поэтому рулонов столько же, сколько троек полных полос.</li>
-  <li><b>Артикулы не смешиваются:</b> рулоны Р{a3["first"]}–Р{a3["last"]} — 54355-3, Р{a7["first"]}–Р{a7["last"]} — 54355-7
-    (кабинет). Прихожая и кухня-гостиная разделены на внешнем углу у арки: стена ТВ — кухня-гостиная, стена с дверями
-    спальни 2 и кабинета — прихожая; у каждой свои рулоны.</li>
-  <li><b>Последний рулон уходит на одну узкую полосу</b>: {narrow}; от него остаётся 7,25 м. Если остатки 54355-3
-    переносить между прихожей, кухней-гостиной и спальнями — хватит {a3["rolls_shared"]} {word(a3["rolls_shared"])}
-    вместо {a3["rolls"]}. В кабинете так не сэкономить: {a7["rolls_shared"]} {word(a7["rolls_shared"])} и там, и так.</li>
-  <li><b>Как клеить.</b> Полосы идут слева направо от красной стрелки — от края шкафа, за которым обоев нет, или от
-    угла; на углу полоса режется вдоль, её остаток начинает следующую стену. Цвет полосы на развёртке — её рулон; на
-    листах «Раскрой рулонов» — что режется из каждого рулона по порядку.</li>
-  <li><b>Обоев нет</b> за шкафами-купе и распашными шкафами, за кухней и колонной холодильника, за шкафом в нише и
-    коробом стояка; проёмы дверей (до 217) и окон вычтены, откосы не считаны. Лоджии — покраска.</li>
-  <li>Если натяжной потолок ставят раньше и обои идут до профиля (≈ 265), полоса 275 — рулонов столько же.</li>
-</ul>
-<div class="flag">Размер рулона {size} и раппорт 0 — по карточкам магазинов; сверьте с этикеткой. Рулоны одного
-  артикула берите из одной партии (номер партии на этикетке), иначе на стыках может быть видна разница в оттенке.</div>
-"""
-    build("Раскладка обоев", "Раскладка обоев", html, numbered("Раскладка обоев"), tmp)
+    html = tmp / "Раскладка обоев.html"
+    html.write_text(wallpaper_pdf.document(w, DATE))
+    pdf = OUT / "Раскладка обоев.pdf"
+    print_pdf(html, pdf, tmp)
+    print(pdf)
 
 
 def main():
