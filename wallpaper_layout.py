@@ -1,12 +1,14 @@
 """Wallpaper layout: each room's walls unfolded as seen from inside, cut into strips a roll wide, every strip numbered
-with the roll it is cut from, every roll with the pieces it gives; the rolls to buy are the last roll number.
+with the roll it is cut from, every roll with the pieces it gives; the rolls to buy are counted per article.
 Strips run left to right from the edge of a cabinet that stands to the ceiling (no wallpaper behind it), on across
 corners (a strip is cut there, its rest goes on the next wall) and across doors and windows (over a door the strip
-is a short piece). Paintable wallpaper without a pattern: a piece is the height it covers + 10 cm to trim. The rolls
-of a room stay in it; two narrow strips may share one length of a roll.
+is a short piece). Andrea Rossi Spectrum Plus, plain, rapport 0: a piece is the height it covers + 10 cm to trim.
+The study is 54355-7, every other room 54355-3 (ARTICLE). The hall and the kitchen-living room share one outline;
+they are split at the outer corner by the arch, each with rolls of its own. The rolls of a room stay in it; two
+narrow strips may share one length of a roll.
 
     .venv/bin/python wallpaper_layout.py               # → renders/Рендеры/Раскладка обоев/, renders/layout/wallpaper.json
-    .venv/bin/python wallpaper_layout.py --width 53    # rolls 0.53 m wide
+    .venv/bin/python wallpaper_layout.py --count       # just the counts
 """
 import argparse
 import json
@@ -40,11 +42,22 @@ WALL_NAMES = {
 }
 ROLL_COLORS = [(250, 226, 200), (208, 228, 247), (214, 238, 214), (243, 214, 236), (246, 240, 196),
                (220, 214, 246), (198, 236, 236), (245, 214, 210)]
+PRODUCT = "Andrea Rossi Spectrum Plus"
+ARTICLE = {"hall": "54355-3", "kitchen_living": "54355-3", "bedroom_1": "54355-3", "bedroom_2": "54355-3",
+           "study": "54355-7"}
+
+
+def chain(ids, first, last):
+    """The walls of a closed outline from first to last, in outline order, wrapping around its start."""
+    i = ids.index(first)
+    ids = ids[i:] + ids[:i]
+    return ids[:ids.index(last) + 1]
 
 
 class Room:
-    def __init__(self, key, name, m, windows, wall_ids, W):
-        self.key, self.name, self.W = key, name, W
+    def __init__(self, key, name, m, windows, wall_ids, W, closed=True):
+        """closed: the walls go round the room; otherwise a run of walls from one open end to the other."""
+        self.key, self.name, self.W, self.article = key, name, W, ARTICLE[key]
         segs, t = [], 0.0
         for wid in reversed(wall_ids):   # seen from inside, left to right: against the outline's direction
             w = m.walls[wid]
@@ -78,9 +91,9 @@ class Room:
             at = max(at, b)
         if at < P - 0.5:
             free.append([at, P])
-        if covers and free and free[0][0] < 0.5 and free[-1][1] > P - 0.5 and len(free) > 1:
+        if closed and covers and free and free[0][0] < 0.5 and free[-1][1] > P - 0.5 and len(free) > 1:
             free[-1][1] = P + free.pop(0)[1]   # the run across the start of the unfolding
-        self.rot = free[0][0] if covers else 0.0
+        self.rot = free[0][0] if closed and covers else 0.0
         self.P, self.segs, self.covers, self.opens = P, segs, covers, opens
         self.runs = [(a - self.rot, b - self.rot) for a, b in free]
 
@@ -149,7 +162,11 @@ class Room:
         return first + len(rolls)
 
 
-def draw_room(room, path, sc=1.0, row_max=1250):
+def dec(v):
+    return f"{v:.2f}".replace(".", ",")
+
+
+def draw_room(room, path, length, sc=1.0, row_max=1250):
     """The unfolded walls in rows, each strip in the color of its roll, numbered, its roll under the number."""
     segs = []   # (wall, x0, x1 in rotated coords, s at x0)
     for g in room.segs:
@@ -168,13 +185,21 @@ def draw_room(room, path, sc=1.0, row_max=1250):
         cur.append(e)
     rows.append(cur)
     left, top, row_h = 120, 150, H * sc + 170
-    width = int(left * 2 + max(r[-1][2] - r[0][1] for r in rows) * sc)
-    notes = wrap(f"Рулон {room.W / 100:.2f} × 10 м, обои под покраску без раппорта: полоса = высота + 10 на подрезку. "
-                 "Номер — полоса (слева направо от красной стрелки, от края шкафа), под ним — рулон, из которого она "
-                 "режется; цвет — рулон. За шкафами и кухней до потолка обоев нет.", font(20), width - 2 * left)
+    title = f"Раскладка обоев — {room.name}, {room.article} (развёртка, вид изнутри)"
+    width = int(left * 2 + max(max(r[-1][2] - r[0][1] for r in rows) * sc, font(34, True).getlength(title)))
+    notes = wrap(f"{PRODUCT} {room.article}: рулон {dec(room.W / 100)} × {dec(length / 100)} м, однотонные, раппорт 0 — "
+                 "полоса = высота + 10 на подрезку. Номер — полоса (слева направо от красной стрелки: от края шкафа "
+                 "или от угла), под ним — рулон, из которого она режется; цвет — рулон. За шкафами и кухней до "
+                 "потолка обоев нет.", font(20), width - 2 * left)
     img = Image.new("RGB", (width, int(top + len(rows) * row_h + 40 + 32 * len(notes))), "white")
     d = ImageDraw.Draw(img)
-    d.text((left, 50), f"Раскладка обоев — {room.name} (развёртка, вид изнутри)", fill=INK, font=font(34, True))
+    d.text((left, 50), title, fill=INK, font=font(34, True))
+    covers = []   # a cabinet over several walls (the niche) as one, with one label
+    for c0, c1, label in sorted(room.covers):
+        if covers and covers[-1][2] == label and c0 <= covers[-1][1] + 0.5:
+            covers[-1][1] = max(covers[-1][1], c1)
+        else:
+            covers.append([c0, c1, label])
 
     opens = [((o[0] - room.rot) % room.P, (o[0] - room.rot) % room.P + o[1] - o[0], *o[2:]) for o in room.opens]
 
@@ -192,7 +217,7 @@ def draw_room(room, path, sc=1.0, row_max=1250):
                 q0, q1 = P(x0, p["z1"]), P(x1, p["z0"])
                 d.rectangle([q0, q1], fill=ROLL_COLORS[(p["roll"] - 1) % len(ROLL_COLORS)], outline=(120, 110, 100),
                             width=1)
-        for c0, c1, label in room.covers:   # cabinets to the ceiling
+        for c0, c1, label in covers:   # cabinets to the ceiling
             x0 = (c0 - room.rot) % room.P
             lo, hi = max(x0, r0), min(x0 + c1 - c0, r1)
             if hi - lo > 0.1:
@@ -254,15 +279,19 @@ def draw_room(room, path, sc=1.0, row_max=1250):
 
 
 def draw_rolls(rooms, path, length, W):
-    """Each roll as cut: pieces along it in order from its start, the strip number and length on each."""
+    """Each roll of one article as cut: pieces along it in order from its start, the strip number and length on each."""
     sc, left = 1.3, 60
     bar_h = max(46, W * 0.9)
     n = sum(len(r.rolls_) for r in rooms)
     width = int(left * 2 + length * sc + 220)
-    img = Image.new("RGB", (width, int(130 + len(rooms) * 70 + n * (bar_h + 26))), "white")
+    img = Image.new("RGB", (width, int(170 + len(rooms) * 70 + n * (bar_h + 26))), "white")
     d = ImageDraw.Draw(img)
-    d.text((left, 40), f"Раскрой рулонов {W / 100:.2f} × {num(length / 100)} м", fill=INK, font=font(34, True))
-    y = 120
+    d.text((left, 40), f"Раскрой рулонов {rooms[0].article} — {n} рул. {dec(W / 100)} × {dec(length / 100)} м",
+           fill=INK, font=font(34, True))
+    d.text((left, 92), f"{PRODUCT} {rooms[0].article}: " + ", ".join(r.name.lower() if i else r.name
+                                                                       for i, r in enumerate(rooms)),
+           fill=GREY_TXT, font=font(22))
+    y = 160
     for room in rooms:
         d.text((left, y), f"{room.name} — {len(room.rolls_)} рул. (Р{room.rolls_[0][0]}–Р{room.rolls_[-1][0]}), "
                           f"полос {len({p['strip'] for p in room.pieces})}, кусков {len(room.pieces)}",
@@ -293,7 +322,7 @@ def main():
     ap.add_argument("--config", default="rooms/apartment.json")
     ap.add_argument("--plan", default="plan.json")
     ap.add_argument("--width", type=float, default=106.0, help="roll width, cm")
-    ap.add_argument("--length", type=float, default=1000.0, help="roll length, cm")
+    ap.add_argument("--length", type=float, default=1005.0, help="roll length, cm")
     ap.add_argument("--out", default="renders/Рендеры/Раскладка обоев")
     ap.add_argument("--json", default="renders/layout/wallpaper.json")
     ap.add_argument("--count", action="store_true", help="only print the counts")
@@ -301,27 +330,45 @@ def main():
     cfg = json.loads(Path(args.config).read_text())
     m = Model(cfg, json.loads(Path(args.plan).read_text()))
     XR = {r["id"]: r for r in cfg["extra_rooms"]}
-    rooms = [Room("main", "Прихожая и кухня-гостиная", m, cfg["windows"], [w["id"] for w in cfg["outline"]], args.width)]
+    main_ids = [w["id"] for w in cfg["outline"]]
+    hall, living = chain(main_ids, "pier_end", "hall_left"), chain(main_ids, "tv", "pier_back")
+    assert sorted(hall + living) == sorted(main_ids), "hall + kitchen-living must be the whole outline"
+    rooms = [Room("hall", "Прихожая", m, cfg["windows"], hall, args.width, closed=False),
+             Room("kitchen_living", "Кухня-гостиная", m, cfg["windows"], living, args.width, closed=False)]
     rooms += [Room(rid, name, m, cfg["windows"], [w["id"] for w in XR[rid]["outline"]], args.width)
-              for rid, name in (("bedroom_1", "Спальня 1"), ("study", "Кабинет"), ("bedroom_2", "Спальня 2"))]
+              for rid, name in (("bedroom_1", "Спальня 1"), ("bedroom_2", "Спальня 2"), ("study", "Кабинет"))]
+    rooms.sort(key=lambda room: room.article)   # one article's rolls in a row: 54355-3 first, then 54355-7
     n, r = 1, 1
     for room in rooms:
         n = room.strips(n)
         r = room.rolls(r, args.length)
-    total = pack(sum((room.pieces for room in rooms), []), args.length, args.width)
     summary = []
     for room in rooms:
         area = sum((p["z1"] - p["z0"]) * p["h"] for p in room.pieces)
-        summary.append(dict(key=room.key, name=room.name, rolls=len(room.rolls_), first=room.rolls_[0][0],
-                            last=room.rolls_[-1][0], strips=len({p["strip"] for p in room.pieces}),
-                            pieces=len(room.pieces), area=round(area / 1e4, 2),
-                            cut=round(sum(p["w"] * p["h"] for p in room.pieces) / 1e4, 2),
+        summary.append(dict(key=room.key, name=room.name, article=room.article, rolls=len(room.rolls_),
+                            first=room.rolls_[0][0], last=room.rolls_[-1][0],
+                            strips=len({p["strip"] for p in room.pieces}), pieces=len(room.pieces),
+                            area=round(area / 1e4, 2), cut=round(sum(p["w"] * p["h"] for p in room.pieces) / 1e4, 2),
                             list=[dict(roll=k, pieces=[dict(strip=p["strip"], length=p["w"], width=round(p["h"], 1))
-                                                       for p, _, _ in rr]) for k, rr in room.rolls_]))
-        print(f"{room.name:28s} Р{summary[-1]['first']}–Р{summary[-1]['last']}: {summary[-1]['rolls']} рул., "
-              f"полос {summary[-1]['strips']}, кусков {summary[-1]['pieces']}, на стене {summary[-1]['area']} м², "
-              f"отрезано {summary[-1]['cut']} м²")
-    print(f"всего по комнатам {r - 1} рул.; если остатки носить между комнатами — {len(total)}")
+                                                       for p, _, _ in rr],
+                                       rest=round(args.length - max(x + p["w"] for p, x, y in rr if y < 0.1), 1))
+                                  for k, rr in room.rolls_]))
+        print(f"{room.name:16s} {room.article}  Р{summary[-1]['first']}–Р{summary[-1]['last']}: "
+              f"{summary[-1]['rolls']} рул., полос {summary[-1]['strips']}, кусков {summary[-1]['pieces']}, "
+              f"полосами {summary[-1]['area']} м², отрезано {summary[-1]['cut']} м²")
+    articles = []
+    for art in sorted({room.article for room in rooms}):
+        rs = [room for room in rooms if room.article == art]
+        shared = pack(sum((room.pieces for room in rs), []), args.length, args.width)
+        articles.append(dict(article=art, rooms=[room.key for room in rs], names=[room.name for room in rs],
+                             rolls=sum(len(room.rolls_) for room in rs), first=rs[0].rolls_[0][0],
+                             last=rs[-1].rolls_[-1][0], rolls_shared=len(shared),
+                             strips=sum(len({p["strip"] for p in room.pieces}) for room in rs),
+                             cut=round(sum(p["w"] * p["h"] for room in rs for p in room.pieces) / 1e4, 2)))
+        a = articles[-1]
+        print(f"{art}: {a['rolls']} рул. (Р{a['first']}–Р{a['last']}: {', '.join(a['names'])}); "
+              f"если остатки носить между этими комнатами — {a['rolls_shared']}")
+    print(f"всего {r - 1} рул.")
     if args.count:
         return
     out = Path(args.out)
@@ -330,16 +377,18 @@ def main():
         f.unlink()
     files = []
     for i, room in enumerate(rooms, 1):
-        f = out / f"{i:02d} {room.name}.png"
-        draw_room(room, f)
+        f = out / f"{i:02d} {room.name} ({room.article}).png"
+        draw_room(room, f, args.length)
         files.append(f)
-    f = out / f"{len(rooms) + 1:02d} Раскрой рулонов.png"
-    draw_rolls(rooms, f, args.length, args.width)
-    files.append(f)
+    for a in articles:
+        f = out / f"{len(files) + 1:02d} Раскрой рулонов {a['article']}.png"
+        draw_rolls([room for room in rooms if room.article == a["article"]], f, args.length, args.width)
+        files.append(f)
     js = Path(args.json)
     js.parent.mkdir(parents=True, exist_ok=True)
-    js.write_text(json.dumps(dict(width=args.width, length=args.length, rooms=summary, rolls=r - 1,
-                                  rolls_shared=len(total), sheets=[str(f) for f in files]), ensure_ascii=False, indent=1))
+    js.write_text(json.dumps(dict(product=PRODUCT, width=args.width, length=args.length, rooms=summary,
+                                  articles=articles, rolls=r - 1, rolls_shared=sum(a["rolls_shared"] for a in articles),
+                                  sheets=[str(f) for f in files]), ensure_ascii=False, indent=1))
     for f in files:
         print(f)
 
