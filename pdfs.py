@@ -2,7 +2,7 @@
 «Обмерный план», «План мебели», «План освещения» — the sheets of plan_sketch.py / plans.py, whole apartment and each
 room; «Раскладка плитки», «Раскладка обоев» — a summary page and the sheets of tile_layout.py / wallpaper_layout.py;
 «Расчёт материалов» — pdf/src/Расчёт материалов.html, its numbers from stats.py and the layouts; «Расчёт плитки» —
-tiles, cuts, holes, 45° miters and grout from tile_works.py; «Чертежи» — the sheets of drawings.py, room by room.
+tiles, cuts, holes, 45° miters and grout from tile_works.py; «Чертежи» — the sheets of drawings.py, room by room (and as PNG in pdf/Чертежи/).
 
     .venv/bin/python plans.py && .venv/bin/python plan_sketch.py --rooms && .venv/bin/python export.py
     .venv/bin/python tile_layout.py && .venv/bin/python tile_works.py
@@ -12,6 +12,7 @@ tiles, cuts, holes, 45° miters and grout from tile_works.py; «Чертежи»
 """
 import datetime
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -391,6 +392,16 @@ def drawings(tmp):
     for room in sorted(p for p in (SHEETS / "Чертежи").iterdir() if p.is_dir()):
         sheets += [(f"{room.name.split(' ', 1)[1]}: {cap}", f) for cap, f in numbered(f"Чертежи/{room.name}")]
     build("Чертежи", "Чертежи", "", sheets, tmp)
+    drawings_png()
+
+
+def drawings_png():
+    """The same sheets as PNG next to the PDF, pdf/Чертежи/<NN Комната>/<NN Лист>.png: easy to browse on GitHub."""
+    dst = OUT / "Чертежи"
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(SHEETS / "Чертежи", dst, ignore=shutil.ignore_patterns(".*"))
+    print(dst, sum(1 for _ in dst.rglob("*.png")))
 
 
 def main():
