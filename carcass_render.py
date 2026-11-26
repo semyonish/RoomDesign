@@ -88,7 +88,7 @@ def assemble(box):
         hosts = [t for t in tracks if t["s"][0] < p["s"][1] and p["s"][0] < t["s"][1]]
         p["d"] = [box["front"] - 2.8 + T, box["front"] - T]
         if p["z"][1] - p["z"][0] > p["s"][1] - p["s"][0]:   # an upright: seat it in the tracks at its ends
-            below = [t for t in hosts if t["z"][0] <= p["z"][0] + 0.5 and t["z"][1] - t["z"][0] < 5]
+            below = [t for t in hosts if abs(t["z"][0] - p["z"][0]) < 0.5 and t["z"][1] - t["z"][0] < 5]
             above = [t for t in hosts if abs(t["z"][1] - p["z"][1]) < 0.5 and t["z"][1] - t["z"][0] < 5]
             if below:
                 p["z"][0] = below[0]["z"][0] + T
@@ -131,6 +131,15 @@ def fasteners(box, pieces, mats, col):
             for s_, z in c["at"]:
                 screw_along((s_, d, z), (s_, d, z - 4.0), ((s_, d, z), (s_, d, z + 0.12)), 0.42)
             marks.append((c["id"], (c["at"][0][0], p["d"][1], c["at"][0][1])))
+        elif c["type"] == "plate":                                     # flat strips on the face: frame post + stud
+            s0, s1 = c["s"]
+            for z in c["z"]:
+                block(f"Plate {c['id']}", (s0, s1), (front, front + T), (z - c["h"] / 2, z + c["h"] / 2), galv, col)
+                for s_ in c["screws"]:
+                    for dz in (-1.5, 1.5):
+                        screw_along((s_, front + T, z + dz), (s_, front - 1.4, z + dz),
+                                    ((s_, front + T, z + dz), (s_, front + T + 0.25, z + dz)))
+            marks.append((c["id"], ((s0 + s1) / 2, front, c["z"][0])))
         else:
             s_, z = c["at"]
             marks.append((c["id"], (s_, front, z)))
@@ -274,6 +283,17 @@ def build(box, inst, room, rough, col):
     marks = fasteners(box, pieces, mats, col)
     drop_d = rapid_sl(box, inst, rough, mats, col, solids)
     drain(box, inst, rough, drop_d, mats, col, solids)
+    if box.get("riser"):                          # the sewer riser behind the box, floor to ceiling, with its sockets
+        r = box["riser"]
+        cs, cd, rr = sum(r["s"]) / 2, sum(r["d"]) / 2, (r["s"][1] - r["s"][0]) / 2
+        pipe("Riser Ø110", (cs, cd, rough), (cs, cd, 230), rr, mats["pvc"], col, solids, "riser")
+    for p in box.get("upper", {}).get("pipes", []):   # the heater's pipes down through the box: the solid runs only
+        if p.get("dashed") or "d" not in p:
+            continue
+        for (s0, z0), (s1, z1) in zip(p["path"], p["path"][1:]):
+            if s0 == s1 and min(z0, z1) < 120:     # cut at 121: through the box top, not into the cabinet
+                pipe(f"Pipe {p['name']}", (s0, p["d"], min(max(z0, z1), 121)), (s0, p["d"], min(z0, z1)),
+                     p.get("r", 1.0), mats["pvc"], col, solids, "pipes")
     for h in box["holes"]:
         if "водорозетка" in h["name"]:
             pipe("Water Socket", (h["s"], box["front"] - 2.5, h["z"]), (h["s"], box["front"] + 1, h["z"]), 1.2,
@@ -410,6 +430,7 @@ def main():
     ap.add_argument("--view", default="main", help="main, low, or nodes: the connections to the frame on one sheet")
     ap.add_argument("--small", action="store_true")
     ap.add_argument("--samples", type=int, default=96)
+    ap.add_argument("--check", action="store_true", help="only the collision and support check, no render")
     args = ap.parse_args()
     plan = json.loads((ROOT / "plan_carcass.json").read_text())
     box, rough, inst = plan["boxes"][args.box], plan["rough_floor"], plan["installation"]
@@ -422,6 +443,8 @@ def main():
     solids, marks = build(box, inst, room, rough, col)
     report = check(box, inst, solids)
     print("\n".join(report))
+    if args.check:
+        return
 
     world = bpy.data.worlds.new("Studio")
     world.use_nodes = True

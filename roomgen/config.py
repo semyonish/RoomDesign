@@ -315,8 +315,9 @@ def _resolve(node, palette):
 
 def load(path, variant=None):
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    if variant:  # named set of overrides from the config's "variants", e.g. another palette
-        over = deepcopy(raw["variants"][variant])
+    # Named sets of overrides from the config's "variants", e.g. another palette; "a+b" applies a, then b on top.
+    for name in variant.split("+") if variant else []:
+        over = deepcopy(raw["variants"][name])
         rooms = over.pop("rooms", {})  # extra rooms by id, e.g. another floor in one room
         raw = deep_merge(raw, over)
         for patch in raw.pop("furniture_patch", []):  # change items in place, found by their keys, e.g. a shorter wardrobe

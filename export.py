@@ -140,7 +140,8 @@ def export_plans():
         stem = src.stem
         kind = "Обмерный план"
         for prefix, k in (("furniture", "Мебель"), ("lights_edges", "Освещение по краям"), ("lights", "Освещение"),
-                          ("tiles", "Плитка"), ("elevation", "Развёртка"), ("frame", "Каркас короба")):
+                          ("tiles", "Плитка"), ("elevation", "Развёртка"), ("frame", "Каркас короба"),
+                          ("boiler", "Короб с бойлером"), ("towel", "Полотенцесушитель"), ("mirror", "Зеркало")):
             if stem == prefix or stem.startswith(prefix + "_"):
                 kind, stem = k, stem[len(prefix) + 1:]
         full = stem.endswith("_full")

@@ -61,7 +61,7 @@ def draw(box, out):
     left, el_top = 150, 190                                   # elevation origin: s 0 at x left, z 125 at el_top
     plan_top = el_top + (125 - ROUGH) * SCALE + 150           # plan: rough back wall (d 0) here
     W = int(left + L * SCALE + (250 if box["right_end"] else 190) + 940)
-    H = int(plan_top + (F + 10) * SCALE + 520)
+    H = int(plan_top + (F + 10) * SCALE + 520) + 1200   # room for long notes; cropped at the end
     img = Image.new("RGB", (W, H), "white")
     d = ImageDraw.Draw(img)
 
@@ -125,7 +125,7 @@ def draw(box, out):
     d.text(E(ax, 25), "вырезы по раме", fill=GREY, font=f_s, anchor="mm")
     uprights = [q for q in box["pieces"] if q[1] == "ПП" and q[5] - q[4] > q[3] - q[2]]
     for pid, kind, s0, s1, z0, z1, d0, d1, n, _ in box["pieces"]:
-        if d1 <= F - 5 and kind == "ПН" and z1 - z0 > 6:   # vertical track on the back wall: behind, dashed
+        if d1 <= F - 5 and d1 - d0 <= 10 and z1 - z0 > 6:   # an upright on the back wall: behind, dashed
             dashed_rect(E(s0, z0), E(s1, z1), COLORS[kind])
         elif d1 - d0 > 10:                                 # ties to the wall: seen end-on, behind the studs
             continue
@@ -155,8 +155,23 @@ def draw(box, out):
         s0, s1, z0, z1 = box["hatch"]
         dashed_rect(E(s0, z0), E(s1, z1), RED)
         d.text(E((s0 + s1) / 2, (z0 + z1) / 2), f"люк {s1 - s0:g} × {z1 - z0:g}", fill=RED, font=f_s, anchor="mm")
+    if box.get("riser"):                   # the riser behind the studs: dashed, floor to the top
+        r = box["riser"]
+        dashed_rect(E(r["s"][0], ROUGH), E(r["s"][1], 120), (110, 110, 110))
+        tag(E(sum(r["s"]) / 2, 40), r["label"], (90, 90, 90), "mm")
+        tag(E(sum(r["s"]) / 2, 35), "за стойкой", (90, 90, 90), "mm")
     for c in box.get("connections", []):   # where profiles meet the Grohe frame: numbered, explained in the notes
-        s, z = c["at"][0] if c["type"] == "screw_down" else c["at"]
+        if c["type"] == "plate":           # strips on the face across the frame post and the stud beside it
+            for z in c["z"]:
+                rect(E(c["s"][0], z - c["h"] / 2), E(c["s"][1], z + c["h"] / 2), fill=(250, 215, 215), outline=RED,
+                     width=2)
+                for s_ in c["screws"]:
+                    for dz in (-1.5, 1.5):
+                        x, y = E(s_, z + dz)
+                        d.ellipse([x - 2.5, y - 2.5, x + 2.5, y + 2.5], fill=RED)
+            s, z = sum(c["s"]) / 2, (c["z"][0] + c["z"][1]) / 2
+        else:
+            s, z = c["at"][0] if c["type"] == "screw_down" else c["at"]
         x, y = E(s + (1.5 if c["type"] == "overlap" else 0), z + (7 if c["type"] == "overlap" else 0))
         d.rounded_rectangle([x - 20, y - 13, x + 20, y + 13], 6, fill=RED)
         d.text((x, y), c["id"], fill="white", font=f_s, anchor="mm")
@@ -205,8 +220,72 @@ def draw(box, out):
             rect(Pp(s0, d0), Pp(s1, d1), outline=COLORS[kind], width=3)
         elif d1 - d0 > 10 or (z1 < 60 and z1 - z0 <= 6):   # ties above and floor tracks under the cut
             dashed_rect(Pp(s0, d0), Pp(s1, d1), COLORS[kind], dash=6)
+    if box.get("riser"):
+        r = box["riser"]
+        (x0, y0), (x1, y1) = Pp(r["s"][0], r["d"][0]), Pp(r["s"][1], r["d"][1])
+        d.ellipse([x0, y0, x1, y1], fill=(215, 215, 215), outline=(90, 90, 90), width=2)
+        (x0, y0), (x1, y1) = Pp(r["sockets"][0], r["d"][0] - 1.5), Pp(r["sockets"][1], r["d"][1] + 1.5)
+        d.ellipse([x0, y0, x1, y1], outline=(150, 150, 150), width=1)
+        tag((x1 + 8, (y0 + y1) / 2), f"{r['label']}, d {r['d'][0]:g}..{r['d'][1]:g}", (90, 90, 90), "lm")
     d.text(Pp(L / 2, F + 2.5 + box["tile"] + 4), f"лицо каркаса {F:g} от стены · ГКЛВ 2 × 1.25 · плитка с клеем "
            f"{box['tile']:g} → лицо {F + 2.5 + box['tile']:g}", fill=INK, font=f_s, anchor="mt")
+    bottom = plan_top + (F + 30) * SCALE
+
+    # ---- the top of the box from above: crossbars under the plasterboard (and the cabinet on it)
+    top = max(t[2] for t in box["tops"])
+    lid = [p for p in box["pieces"] if p[5] >= top - 3]
+    if any(p[7] - p[6] > 10 for p in lid):
+        t0 = bottom + 130
+
+        def Pt(s, dd):
+            return left + s * SCALE, t0 + dd * SCALE
+
+        d.text((left, t0 - 70), f"Верх короба (каркас на {top:g}), вид сверху: ГКЛ снят; пунктиром — шкаф над ним",
+               fill=INK, font=f_m)
+        rect(Pt(-6 if box["walls"][0] else 0, -6), Pt(L + (6 if box["walls"][1] else 0), 0), fill=WALL)
+        for i, has in enumerate(box["walls"]):
+            if has:
+                s = 0 if i == 0 else L
+                rect(Pt(s, -6), Pt(s + (-6 if i == 0 else 6), F + 8), fill=WALL)
+        rect(Pt(f0, 0), Pt(f1, F), fill=(238, 238, 238), outline=FRAME, width=2)
+        d.text(Pt((f0 + f1) / 2, F / 2 + 4), "рама Grohe внизу, верх 113", fill=GREY, font=f_s, anchor="mm")
+        for pid, kind, s0, s1, z0, z1, d0, d1, n, _ in sorted(lid, key=lambda p: p[7] - p[6]):
+            rect(Pt(s0, d0), Pt(s1, d1), fill=COLORS[kind], outline="white")
+            if d1 - d0 > 10 or s1 - s0 > 30:
+                x, y = Pt((s0 + s1) / 2, (d0 + d1) / 2)
+                if s1 - s0 > 30:
+                    x = Pt(next(c for c in (25, 90, L / 2) if s0 < c < s1), 0)[0]
+                d.ellipse([x - 12, y - 12, x + 12, y + 12], fill="white", outline=COLORS[kind], width=2)
+                d.text((x, y), pid, fill=COLORS[kind], font=f_s, anchor="mm")
+        if box.get("riser"):
+            r = box["riser"]
+            (x0, y0), (x1, y1) = Pt(r["s"][0], r["d"][0]), Pt(r["s"][1], r["d"][1])
+            d.ellipse([x0, y0, x1, y1], fill=(215, 215, 215), outline=(90, 90, 90), width=2)
+        up = box.get("upper", {})
+        for p in up.get("pipes", []):        # the heater's pipes coming down through the top
+            if p.get("dashed") or "d" not in p:
+                continue
+            for (s0, z0), (s1, z1) in zip(p["path"], p["path"][1:]):
+                if s0 == s1 and min(z0, z1) < top < max(z0, z1):
+                    x, y = Pt(s0, p["d"])
+                    rr = p.get("r", 1.0) * SCALE
+                    d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=(255, 255, 255), outline=RED, width=3)
+        cab = up.get("cabinet")
+        if cab:
+            back = cab["face"] - cab["door"]
+            for s0, s1 in cab["sides"] + [cab["partition"]]:
+                dashed_rect(Pt(s0, 0), Pt(s1, back), (118, 96, 79), dash=5)
+            tag(Pt(cab["partition"][1] + 1, back - 3), "перегородка шкафа", (118, 96, 79), "lm")
+        marks = sorted({0, L} | {c for p in lid if p[7] - p[6] > 10 for c in (p[2], p[3])})
+        y = Pt(0, F + 8)[1] + 30
+        d.line([Pt(marks[0], 0)[0], y, Pt(marks[-1], 0)[0], y], fill=INK, width=2)
+        for m in marks:
+            x = Pt(m, 0)[0]
+            d.line([x - 6, y + 6, x + 6, y - 6], fill=INK, width=2)
+        for a, b in zip(marks, marks[1:]):
+            if Pt(b, 0)[0] - Pt(a, 0)[0] > 22:
+                d.text(((Pt(a, 0)[0] + Pt(b, 0)[0]) / 2, y - 5), f"{b - a:g}", fill=INK, font=f_s, anchor="mb")
+        bottom = y + 40
 
     # ---- cut list and materials, on the right
     tx, ty = left + L * SCALE + (250 if box["right_end"] else 190), el_top - 46
@@ -244,7 +323,7 @@ def draw(box, out):
         d.text((tx, ty), line, fill=INK, font=f_s)
         ty += 30
     out.mkdir(parents=True, exist_ok=True)
-    img = img.crop((0, 0, W, max(int(plan_top + (F + 30) * SCALE) + 60, ty + 30)))
+    img = img.crop((0, 0, W, int(max(bottom + 60, ty + 30))))
     img.save(out / f"{box['file']}.png")
     print(out / f"{box['file']}.png")
 

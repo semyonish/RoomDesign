@@ -108,11 +108,17 @@ def build_shell(cfg, frames, doors, arch, ceiling_col, cutters):
     for ol, room in zip(outlines(cfg), [None, *cfg.get("extra_rooms", [])]):
         # The interior cutter's material becomes the finish of that room's wall faces (boolean TRANSFER),
         # so a tiled room (walls.finish = "tile") gets tile laid in the plane of each wall.
+        # A room with its own wallpaper color (walls.color, e.g. another wallpaper in the study) works the same way.
         rw = (room or {}).get("walls") or {}
         tiled = rw.get("finish") == "tile"
-        mat = (tile_material(f"Wall Tile {room['id']}", rw, tuple(rw.get("origin", (0.0, 0.0, 0.0))), axes="box")
-               if tiled else wall_mat)
-        cutter = _interior_prism(ol, h, mat, cutters, grow=0.001 if tiled else 0.0)
+        own = not tiled and bool(rw.get("color"))
+        if tiled:
+            mat = tile_material(f"Wall Tile {room['id']}", rw, tuple(rw.get("origin", (0.0, 0.0, 0.0))), axes="box")
+        elif own:
+            mat = materials.wallpaper(f"Wallpaper {room['id']}", rw["color"], rw.get("roughness", walls["roughness"]))
+        else:
+            mat = wall_mat
+        cutter = _interior_prism(ol, h, mat, cutters, grow=0.001 if tiled or own else 0.0)
         accent = rw.get("accent")
         if tiled and accent:  # another tile on some walls: the cutter's side face of each (in outline order)
             cutter.data.materials.append(tile_material(f"Wall Tile {room['id']} Accent", {**rw, **accent},

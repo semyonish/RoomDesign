@@ -31,7 +31,7 @@
   },
   "room": { "height": 270 },
   "walls": { "finish": "wallpaper", "color": "@ivory" },
-  "floor": { "type": "porcelain", "color": "@tile", "grout_color": "@grout", "tile": [120, 60], "roughness": 0.5, "origin": [7.8, -8],
+  "floor": { "type": "porcelain", "color": "@tile", "grout_color": "@grout", "tile": [120, 60], "roughness": 0.5, "origin": [-115, 353],
              "_texture": "Global Tile Amrita 60×120 матовый серо-бежевый; фото одной плитки сюда:",
              "texture": "textures/amrita_sero_bezh_60x120.jpg", "texture_rotate": false,
              "texture_gloss": [0.80, 0.88], "_gloss": "яркость фото, выше которой прожилки глянцевые" },
@@ -47,8 +47,8 @@
     { "id": "entrance",   "from": [0, 0],       "to": [240, 0],     "thickness": 20 },
     { "id": "hall_right", "from": [240, 0],     "to": [240, 246],   "thickness": 20, "_": "наружная часть (вдоль шкафа-купе)" },
     { "id": "hall_right_br1", "from": [240, 246], "to": [240, 351], "thickness": 14, "_": "перегородка со спальней 1, в ней дверь" },
-    { "id": "hall_far",   "from": [240, 351],   "to": [-103, 351],  "thickness": 14 },
-    { "id": "hall_left",  "from": [-103, 351],  "to": [-107, -32],  "thickness": 14 },
+    { "id": "hall_far",   "from": [240, 351],   "to": [-107, 351],  "thickness": 14 },
+    { "id": "hall_left",  "from": [-107, 351],  "to": [-107, -32],  "thickness": 12, "_": "прямая, прихожая 347 по всей длине (2026-11-24); до спальни 2 и кабинета (x −119) — 12" },
     { "id": "tv",         "from": [-107, -32],  "to": [-465, -32],  "thickness": 14 },
     { "id": "window",     "from": [-465, -32],  "to": [-465, -422], "thickness": 40, "_": "20 стена + 20 утеплитель со стороны лоджии (2026-10-24)" },
     { "id": "sofa",       "from": [-465, -422], "to": [-20, -422],  "thickness": 20, "past_ends": [0, 20], "_": "past_ends — до наружного угла за коробом стояка" },
@@ -155,8 +155,8 @@
       "leaf_width": 88, "frame_color": "#2B2A28", "panels": [[0.042, 0.273], [0.327, 0.952]], "stile": 0.15,
       "moulding_scale": 0.6, "raised": false, "portal": { "enabled": false } },
     { "id": "br1", "kind": "interior", "wall": "hall_right_br1", "span": [251, 341], "leaf_width": 80, "opening_height": 217, "leaf_height": 210, "handle_side": "left",
-      "leaf_thickness": 4, "reveal_depth": 10, "floor_to": 247.8, "color": "@joinery", "hardware": "platinum",
-      "far_casing": { "overlap": 2 }, "_far": "открывается в спальню: полотно и коробка заподлицо со стеной спальни, петли со стороны спальни, доборы — со стороны прихожей; наличник 7 заходит на коробку на 2 см, на стену 5 — до угла; плитка в проёме целая, до шва x 247,8 (7,8 см)" },
+      "leaf_thickness": 4, "reveal_depth": 10, "floor_to": 248, "color": "@joinery", "hardware": "platinum",
+      "far_casing": { "overlap": 2 }, "_far": "открывается в спальню: полотно и коробка заподлицо со стеной спальни, петли со стороны спальни, доборы — со стороны прихожей; наличник 7 заходит на коробку на 2 см, на стену 5 — до угла; плитка в проёме до стыка x 248 (8 см): целая 120 до 245 и полоса 3 см (2026-11-24: заход 8 во все проёмы)" },
     { "id": "bath", "kind": "interior", "wall": "hall_far", "span": [127, 207], "leaf_width": 70, "opening_height": 217, "leaf_height": 210, "handle_side": "left", "floor_depth": 2,
       "leaf_thickness": 4, "reveal_depth": 1, "color": "@joinery", "hardware": "platinum",
       "far_casing": { "overlap": 2, "finish_depth": 1.5 }, "_far": "ванная: открывается в прихожую — со стороны ванной полотно в глубине проёма, доборы и наличник поверх плитки (1,5)" },
@@ -164,11 +164,11 @@
       "leaf_thickness": 4, "reveal_depth": 1, "color": "@joinery", "hardware": "platinum",
       "far_casing": { "overlap": 2, "finish_depth": 1.5 }, "_far": "туалет: открывается в прихожую — со стороны туалета полотно в глубине проёма, доборы и наличник поверх плитки (слева до угла 7,5)" },
     { "id": "br2", "kind": "interior", "wall": "hall_left", "span": [252, 342], "leaf_width": 80, "opening_height": 217, "leaf_height": 210, "handle_side": "right",
-      "leaf_thickness": 4, "reveal_depth": 11.4, "floor_to": -112.2, "_floor": "плитка в проёме целая, до шва x −112,2: 8,2–9,1 см (стена прихожей косая)", "color": "@joinery", "hardware": "platinum",
-      "far_casing": { "overlap": 2, "finish_depth": 1.4, "_": "стена прихожей со скосом: у этой двери до стены спальни 15,4, а не 14" }, "_far": "спальня 2: открывается в комнату — полотно заподлицо со стеной спальни, петли с её стороны; наличник 7, слева до угла 8" },
+      "leaf_thickness": 4, "reveal_depth": 8, "floor_to": -115, "_floor": "плитка в проёме целая, до шва x −115: 8 см", "color": "@joinery", "hardware": "platinum",
+      "far_casing": { "overlap": 2 }, "_far": "спальня 2: открывается в комнату — полотно заподлицо со стеной спальни, петли с её стороны; наличник 7, слева до угла 8" },
     { "id": "study", "kind": "interior", "wall": "hall_left", "span": [132, 222], "leaf_width": 80, "opening_height": 217, "leaf_height": 210, "handle_side": "left",
-      "leaf_thickness": 4, "reveal_depth": 10.2, "floor_to": -112.2, "_floor": "плитка в проёме целая, до шва x −112,2: 6,9–7,9 см (стена прихожей косая)", "color": "@joinery", "hardware": "platinum",
-      "far_casing": { "overlap": 2, "finish_depth": 0.2, "_": "стена прихожей со скосом: у этой двери до стены кабинета 14,2" }, "_far": "кабинет: открывается в кабинет — полотно заподлицо со стеной кабинета, петли с его стороны; наличник 7, справа до угла 8" }
+      "leaf_thickness": 4, "reveal_depth": 8, "floor_to": -115, "_floor": "плитка в проёме целая, до шва x −115: 8 см", "color": "@joinery", "hardware": "platinum",
+      "far_casing": { "overlap": 2 }, "_far": "кабинет: открывается в кабинет — полотно заподлицо со стеной кабинета, петли с его стороны; наличник 7, справа до угла 8" }
   ],
 
   "windows": [
@@ -296,10 +296,10 @@
     { "type": "cabinet", "plan": false, "wall": "bath_right", "span": [403.5, 463.5], "depth": 44, "height": 41, "elevation": 40, "drawers": 2, "columns": 1, "open_top": true, "color": "@mocha", "_": "тумба 60 × 45 по оси выводов (y 433,5), вплотную к пеналу; подвесная, 2 горизонтальных ящика (пользователь), цвет как в туалете — assumed" },
     { "type": "basin_top", "wall": "bath_right", "span": [403.5, 463.5], "depth": 45, "height": 85, "thickness": 4, "bowl": [46, 32, 11], "_": "раковина-столешница 60 × 45 с тонкой кромкой 4, верх 85 — как в туалете (assumed)" },
     { "type": "mirror", "wall": "bath_right", "span": [403.5, 463.5], "height": 80, "elevation": 115, "frame": "none", "backlight": { "band": 2.5, "inset": 3, "strength": 10, "temperature": 4000, "group": "bath_mirror" }, "_": "зеркало 60 × 80 с подсветкой по оси тумбы; низ 115 — как в туалете (assumed)" },
-    { "type": "tiled_box", "plan": false, "wall": "bath_left", "span": [366.5, 441], "depth": 20.5, "height": 120, "room": "bathroom", "_": "короб инсталляции: от стены с дверью до конца рамы 50 (y 437) + ГКЛ и плитка; 22 от черновой = 20,5 от плитки; высота 120" },
-    { "type": "tiled_box", "plan": false, "wall": "bath_left", "span": [441, 474.5], "depth": 20.5, "height": 20, "room": "bathroom", "_": "низкий короб с канализационной трубой вплотную к экрану ванны (y 474,5), высота 20" },
+    { "type": "tiled_box", "plan": false, "wall": "bath_left", "span": [366.5, 442.5], "depth": 20.5, "height": 120, "room": "bathroom", "_": "короб инсталляции: от стены с дверью до конца рамы 50 (y 437) + торец: ПН 28×27 на боковую стойку рамы 2,8 + ГКЛ 1 слой 1,25 + плитка с клеем 1,5 → y ≈ 442,5 (пользователь 2026-11-26); 22 от черновой = 20,5 от плитки; высота 120" },
+    { "type": "tiled_box", "plan": false, "wall": "bath_left", "span": [442.5, 474.5], "depth": 20.5, "height": 20, "room": "bathroom", "_": "низкий короб с канализационной трубой вплотную к экрану ванны (y 474,5), высота 20" },
     { "type": "wall_toilet", "plan": false, "wall": "bath_left", "span": [393.75, 430.25], "gap": 20.5, "depth": 49.5, "seat_height": 43.9, "model": "models/roca_meridian_compact_7346248000.3ds", "model_units": 0.01, "model_back": "+y", "plate": { "finish": "chrome", "z": 100, "size": [19.7, 15.6] }, "_": "подвесной унитаз как в туалете; рама 50 в 22 от черновой стены с дверью → ось y 412; клавиша хром на 100 (assumed)" },
-    { "type": "towel_warmer", "wall": "bath_left", "span": [448.5, 466.5], "style": "bars", "bars": 4, "depth": 7, "height": 120, "elevation": 60, "hooks": [5, 58], "connection": "right", "color": "#F4F4F2", "_": "Маргроид Inaro профильный 120 × 18, белый матовый: 4 плоские трубы, крючки в 2 ряда, блок справа внизу (чертёж производителя); центр по центру низкого короба; верх 180, низ 60" },
+    { "type": "towel_warmer", "wall": "bath_left", "span": [448, 469], "style": "bars", "bars": 4, "depth": 7, "height": 120, "elevation": 60, "hooks": [5, 58], "connection": "right", "color": "#F4F4F2", "_": "Маргроид Inaro профильный 120 × 21 (между осями крайних труб 18 — пользователь 2026-11-26), белый матовый: 4 плоские трубы 3 см с шагом 6, крючки в 2 ряда, блок справа внизу (чертёж производителя); центр по центру низкого короба (y 458,5); верх 180, низ 60" },
     { "type": "bath_mixer", "wall": "bath_right", "span": [500, 528], "z": 80, "rain": [195, 40, 25], "_": "смеситель на правой стене над ванной по центру ширины ванны (y 514), на 80, с тропической лейкой на трубе: стойка до 195, кронштейн 40, лейка ⌀25; ручная лейка на шланге в держателе на стойке; термостат, хром, размеры — assumed" },
     { "type": "bidet_shower", "wall": "bath_left", "span": [379, 385], "gap": 20.5, "z": 80, "_": "гигиенический душ слева от унитаза (лицом к нему — к стене с дверью): вывод на лице короба в 30 от оси унитаза (y 382), на 80; набор как в туалете (Hansgrohe 29230000) — assumed" },
     { "type": "curtains", "plan": false, "wall": "bath_far", "cornice": "slot", "slot_offset": 66.5, "slot_width": 8, "niche_depth": 6, "tracks": [70.5, 70.5], "led": false, "tulle": "none", "stacks": [[61.5, 98]], "bottom": 42, "color": "#EEEBE4", "_": "штора ванны во встроенном карнизе: щель в потолке y 478..486, штора на y 482 — 2 внутри чаши; собрана у левой стены, низ 42 внутри ванны; цвет — assumed" },
@@ -417,7 +417,7 @@
     "fixtures": [
       { "at": [145, 46.25], "axis": "y", "group": "hall_1", "_": "прихожая (2026-10-24): первый ряд — ближняя лампа в 40 от входа, средний ровно между первым и последним, последний — 55 от стены санузлов" },
       { "at": [145, 168], "axis": "y", "group": "hall_1" }, { "at": [145, 289.75], "axis": "y", "group": "hall_2" },
-      { "at": [-51.2, 46.25], "axis": "y", "group": "hall_2" }, { "at": [-49.9, 168], "axis": "y", "group": "hall_2" }, { "at": [-48.6, 289.75], "axis": "y", "group": "hall_2" },
+      { "at": [-52, 46.25], "axis": "y", "group": "hall_2" }, { "at": [-52, 168], "axis": "y", "group": "hall_2" }, { "at": [-52, 289.75], "axis": "y", "group": "hall_2" },
       { "at": [-55, -88.25], "axis": "y", "group": "kitchen_spots" }, { "at": [-55, -222], "axis": "y", "group": "kitchen_spots" }, { "at": [-55, -355.75], "axis": "y", "group": "kitchen_spots" },
       { "at": [-383.75, -362], "axis": "x", "group": "sofa_spots" }, { "at": [-246.25, -362], "axis": "x", "group": "sofa_spots" },
       { "at": [-383.75, -82], "axis": "x", "group": "tv_spots" }, { "at": [-246.25, -82], "axis": "x", "group": "tv_spots" },
@@ -573,7 +573,8 @@
     { "name": "bath_wide_right", "_": "ванная: из левого угла у двери → правая стена (пенал, тумба, зеркало, смеситель) и ванна", "position": [95, 372, 160], "look_at": [230, 490, 100], "lens": 14, "resolution": [3000, 2250] },
     { "name": "toilet_door", "_": "туалет: от двери → унитаз и шкаф", "position": [-54, 300, 160], "look_at": [-54, 552.5, 100], "lens": 24, "resolution": [2250, 3000], "clip_start": 68,
       "_clip": "камера в прихожей напротив проёма (x −54), в 67 см за стеной; у плоскости отсечения кадр целиком в проёме — срезано только полотно (по центру комнаты сбоку была видна тёмная боковина колонны у стены)" },
-    { "name": "toilet_corner", "_": "туалет: из левого дальнего угла → правая стена (колонна, тумба, зеркало) и дверь", "position": [-90, 520, 165], "look_at": [20, 380, 110], "lens": 14, "resolution": [3000, 2250] }
+    { "name": "toilet_corner", "_": "туалет: из левого дальнего угла → правая стена (колонна, тумба, зеркало) и дверь", "position": [-90, 520, 165], "look_at": [20, 380, 110], "lens": 14, "resolution": [3000, 2250] },
+    { "name": "toilet_back", "_": "туалет: от короба → дверь, полотенцесушитель и колонна стирки", "position": [-35, 518, 160], "look_at": [-35, 366.5, 115], "lens": 14, "resolution": [3000, 2250] }
   ],
   "variants": {
     "curtains_closed": { "curtains_closed": ["window"], "_": "плотные шторы гостиной задёрнуты на всё окно (два полотна до середины), тюль за ними" },
@@ -615,7 +616,25 @@
                      "bedroom_2": { "floor": { "color": "#5B4835", "plank": [138, 15.6], "texture": "textures/laminate_quickstep_pw9075.jpg", "tint_to": null, "_": "Quick-Step PW9075, как в st_quickstep" } } },
                    "_": "ламинат Quick-Step «Дуб селект морёный» PW9075 во всех комнатах с ламинатом (спальня 1, кабинет, спальня 2) вместо Tarkett «Феникс» — проба" },
     "hall_wardrobe_230": { "furniture_patch": [ { "match": { "type": "wardrobe", "wall": "hall_right" }, "set": { "span": [0, 230] } } ],
-                           "_": "прихожая: шкаф-купе 230 вместо 240 (до проёма спальни 21 вместо 11) — проба" }
+                           "_": "прихожая: шкаф-купе 230 вместо 240 (до проёма спальни 21 вместо 11) — проба" },
+    "spectrum_wallpaper": { "walls": { "color": "#ECE9E1" },
+                            "rooms": { "study": { "walls": { "color": "#BCC3B8" } },
+                                       "loggia_kitchen": { "walls": { "color": "@ivory" } }, "loggia_bedroom_1": { "walls": { "color": "@ivory" } } },
+                            "furniture_patch": [ { "match": { "type": "wardrobe", "wall": "st_pocket_end" }, "set": { "color": "@mocha" } },
+                                                 { "match": { "type": "swing_wardrobe", "wall": "st_door" }, "set": { "color": "@mocha" } } ],
+                            "_": "обои Andrea Rossi Spectrum Plus (винил на флизелине, 1,06 × 10,05, фактура «песчинка», без раппорта): 54355-7 серо-зелёный в кабинете, 54355-3 тёплый белый везде, где обои (прихожая, кухня-гостиная, спальни); лоджии крашеные — как были; шкафы кабинета мокко вместо графита. Цвета — по каталожным фото walls.ru / oboi-store.ru (примерно) — набросок 2026-11-21" },
+    "st_oak_milk": { "furniture_patch": [
+                       { "match": { "type": "desk", "wall": "st_right" }, "set": { "top": "wood", "color": "#B48C62", "legs": "#2A2A2A" } },
+                       { "match": { "type": "sofa", "wall": "st_left" }, "set": { "color": "#E3DACB" } } ],
+                     "_": "кабинет, к обоям 54355-7 и шкафам мокко (применять как spectrum_wallpaper+st_oak_milk): стол — светлый натуральный дуб, чёрные ножки; диван молочный (овсяный); кресло графит — предложение 2026-11-21" },
+    "st_mocha_terracotta": { "furniture_patch": [
+                       { "match": { "type": "desk", "wall": "st_right" }, "set": { "top": "paint", "color": "@mocha", "legs": "#2A2A2A" } },
+                       { "match": { "type": "sofa", "wall": "st_left" }, "set": { "color": "#A9654B" } } ],
+                     "_": "кабинет, к обоям 54355-7: стол мокко в тон шкафам (матовый), чёрные ножки; диван терракотовый; кресло графит — предложение 2026-11-21" },
+    "st_walnut_cognac": { "furniture_patch": [
+                       { "match": { "type": "desk", "wall": "st_right" }, "set": { "top": "wood", "color": "#6B4B36", "legs": "#2A2A2A" } },
+                       { "match": { "type": "sofa", "wall": "st_left" }, "set": { "color": "#94613F" } } ],
+                     "_": "кабинет, к обоям 54355-7: стол — орех, чёрные ножки; диван коньячный; кресло графит — предложение 2026-11-21" }
   },
   "render": { "samples": 384, "white_balance": 3800, "exposure": -0.5, "clay": false,
     "eye": { "lens": 24, "height": 160, "skip": ["entrance", "wiring"],

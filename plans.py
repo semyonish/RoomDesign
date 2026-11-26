@@ -26,6 +26,7 @@ BELOW = (196, 196, 196)   # under a window the wall below the cut shows from abo
 FRAME_D = 7               # PVC frame depth, cm (roomgen.plan.WINDOW_FRAME_D)
 EDGE_R = 5.4              # BH53 visible part ⌀108: the edges the "по краям" lighting sheet measures to, cm
 TILE, JOINT = (244, 240, 232), (150, 140, 128)   # tile layout sheets: the tile and its joints
+GROUT = 0.1   # cm, the joint between tiles (user 2026-11-24: «стыки считай 1 мм»): the grid steps by tile + joint
 TILE_WALL, ROUGH = (222, 206, 176), (135, 135, 135)   # wall tile with adhesive on lighting sheets; sizes on rough walls
 COLORS = [(214, 120, 40), (40, 110, 200), (60, 160, 90), (170, 70, 160), (200, 170, 20), (20, 160, 170),
           (230, 80, 120), (110, 90, 200), (120, 140, 60), (150, 100, 60), (90, 90, 90), (190, 40, 40),
@@ -222,14 +223,14 @@ class Model:
                 rd = dr.get("reveal_depth", 10)
                 fd = dr.get("floor_depth", rd if dr.get("kind") == "entrance" else rd + dr.get("leaf_thickness", 4) / 2)
                 polys.append(self.patch(self.walls[dr["wall"]], dr["span"], fd, dr.get("floor_to")))
-            self.tiles.append((tuple(fl.get("origin", (0, 0))), tuple(fl["tile"]), polys))
+            self.tiles.append((tuple(fl.get("origin", (0, 0))), tuple(t + GROUT for t in fl["tile"]), polys))
             self.tiled_rooms |= {"hall", "kitchen_living"}
         for r in cfg.get("extra_rooms", []):
             rf = r.get("floor") or {}
             if rf.get("type") == "porcelain":
                 polys = [[tuple(w["from"]) for w in r["outline"]]]
                 polys += [self.patch(self.walls[dw["wall"]], dw["span"], dw["depth"]) for dw in r.get("doorways", [])]
-                self.tiles.append((tuple(rf.get("origin", (0, 0))), tuple(rf["tile"]), polys))
+                self.tiles.append((tuple(rf.get("origin", (0, 0))), tuple(t + GROUT for t in rf["tile"]), polys))
                 self.tiled_rooms.add(r["id"])
 
         # tiled walls: the outline is the face of the tile; tile with adhesive (plan.json tile_layer) lies behind it
@@ -520,7 +521,7 @@ def sheet(m, box, scale, title, mode, room=None, edges=False):
             d.text((W - margin, 60), note, fill=DIM, font=f_m, anchor="rt")
     if mode == "tiles" and m.tiles:
         tx, ty = m.tiles[0][1]
-        note = (f"плитка {num(tx)} × {num(ty)}, шов 2 мм, прямая раскладка, швы в линию; красные линии — опорные швы, "
+        note = (f"плитка {num(tx - GROUT)} × {num(ty - GROUT)}, шов {num(GROUT * 10)} мм, прямая раскладка, швы в линию; красные линии — опорные швы, "
                 "от них ведётся раскладка; размеры — от чистовой стены до швов, см; красные числа — подрезка; "
                 "под ванной и коробом плитки нет")
         lines = [""]

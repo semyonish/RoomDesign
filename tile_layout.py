@@ -14,9 +14,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from plans import BOLD, DIM, FONT, JOINT, LABEL, TILE, Model, in_polygon, num, sheet
+from plans import BOLD, DIM, FONT, GROUT, JOINT, LABEL, TILE, Model, in_polygon, num, sheet
 
 TW, TH = 120.0, 60.0   # the tile: along its veins × across
+PU, PV = TW + GROUT, TH + GROUT   # the grid steps by tile + joint (GROUT, 1 mm); a joint is centred on its grid line
 STEP = 0.5             # raster, cm: every edge of the rooms lies on it
 H_WET = 267.0
 SLIVER = 3.0
@@ -128,8 +129,8 @@ class Surface:
     def cut(self, opt_out=False):
         keep = self.raster(opt_out)
         gu, gv = self.gu, self.gv
-        ci = np.floor((gu - self.origin[0]) / TW).astype(int)
-        cj = np.floor((gv - self.origin[1]) / TH).astype(int)
+        ci = np.floor((gu - self.origin[0]) / PU).astype(int)
+        cj = np.floor((gv - self.origin[1]) / PV).astype(int)
         ids = np.zeros(keep.shape, int)
         out = []
         for i in np.unique(ci):
@@ -147,19 +148,25 @@ class Surface:
                         continue
                     free = comp & ~self.optmask[r0:r1, c0:c1]   # the label off the part behind a cabinet
                     lr, lc = label_point(free if free.sum() >= 0.3 * comp.sum() else comp)
-                    out.append(dict(surf=self, u0=gu[c0 + cc.min()] - STEP / 2, u1=gu[c0 + cc.max()] + STEP / 2,
+                    out.append(dict(surf=self, ci=i, cj=j, u0=gu[c0 + cc.min()] - STEP / 2, u1=gu[c0 + cc.max()] + STEP / 2,
                                     v0=gv[r0 + rr.min()] - STEP / 2, v1=gv[r0 + rr.max()] + STEP / 2,
                                     area=len(rr) * STEP ** 2, lu=gu[c0 + lc], lv=gv[r0 + lr],
                                     opt=float(self.optmask[r0:r1, c0:c1][comp].sum()) * STEP ** 2))
                     ids[r0:r1, c0:c1][comp] = len(out)
-        snap_u, snap_v = self.edges()
-        for p in out:   # the raster finds an edge to half a step: snap it onto the joint or wall it lies on
-            for k, cands in (("u0", snap_u), ("u1", snap_u), ("v0", snap_v), ("v1", snap_v)):
+        su0, su1, sv0, sv1 = self.edges()
+        for p in out:   # the raster finds an edge to half a step: snap it onto the tile edge or wall it lies on
+            for k, cands in (("u0", su0), ("u1", su1), ("v0", sv0), ("v1", sv1)):
                 c = min(cands, key=lambda c: abs(c - p[k]))
-                if abs(c - p[k]) <= STEP * 0.6:
+                if abs(c - p[k]) <= STEP * 0.7:
                     p[k] = c
+            # never past its own tile: where a wall or a doorway joint lies on a grid line, the joint is left to it
+            p["u0"] = max(p["u0"], self.origin[0] + p["ci"] * PU + GROUT / 2)
+            p["u1"] = min(p["u1"], self.origin[0] + (p["ci"] + 1) * PU - GROUT / 2)
+            p["v0"] = max(p["v0"], self.origin[1] + p["cj"] * PV + GROUT / 2)
+            p["v1"] = min(p["v1"], self.origin[1] + (p["cj"] + 1) * PV - GROUT / 2)
         out, ids = merge_slivers(out, ids)
-        for p in out:
+        for k, p in enumerate(out, 1):
+            p["rid"] = k   # its cells in `ids` (the list gets sorted later)
             p["w"], p["h"] = p["u1"] - p["u0"], p["v1"] - p["v0"]
             p["full"] = p["w"] >= TW - 0.1 and p["h"] >= TH - 0.1 and p["area"] >= TW * TH - 1
         if not opt_out:
@@ -168,17 +175,22 @@ class Surface:
 
 
 def _edges(self):
-    """Where piece edges can lie exactly: the joints, and the edges of the surface and what is cut out of it."""
+    """Where piece edges can lie exactly: a tile starts half a joint past a grid line and ends half a joint before the
+    next; and the edges of the surface and what is cut out of it. → starts and ends along u, starts and ends along v."""
     u0, u1, v0, v1 = self.bounds
-    us = {self.origin[0] + k * TW for k in range(math.floor((u0 - self.origin[0]) / TW), math.ceil((u1 - self.origin[0]) / TW) + 1)}
-    vs = {self.origin[1] + k * TH for k in range(math.floor((v0 - self.origin[1]) / TH), math.ceil((v1 - self.origin[1]) / TH) + 1)}
+    ku = range(math.floor((u0 - self.origin[0]) / PU) - 1, math.ceil((u1 - self.origin[0]) / PU) + 2)
+    kv = range(math.floor((v0 - self.origin[1]) / PV) - 1, math.ceil((v1 - self.origin[1]) / PV) + 2)
+    lu = [self.origin[0] + k * PU for k in ku]
+    lv = [self.origin[1] + k * PV for k in kv]
+    walls_u, walls_v = set(), set()
     for r in self.region + self.excl + self.opt:
-        us |= {r[0], r[1]}
-        vs |= {r[2], r[3]}
+        walls_u |= {r[0], r[1]}
+        walls_v |= {r[2], r[3]}
     for poly in (self.polys or []) + list(self.minus):
-        us |= {q[0] for q in poly}
-        vs |= {q[1] for q in poly}
-    return sorted(us), sorted(vs)
+        walls_u |= {q[0] for q in poly}
+        walls_v |= {q[1] for q in poly}
+    return (sorted(walls_u | {x + GROUT / 2 for x in lu}), sorted(walls_u | {x - GROUT / 2 for x in lu}),
+            sorted(walls_v | {y + GROUT / 2 for y in lv}), sorted(walls_v | {y - GROUT / 2 for y in lv}))
 
 
 Surface.edges = _edges
@@ -192,9 +204,10 @@ def merge_slivers(pieces, ids):
         for qk, q in enumerate(pieces):
             if q is None or qk == k:
                 continue
-            across_u = (abs(q["u1"] - p["u0"]) < 1e-6 or abs(q["u0"] - p["u1"]) < 1e-6) and \
+            near = GROUT + 1e-6   # the two sides of a joint
+            across_u = (abs(q["u1"] - p["u0"]) < near or abs(q["u0"] - p["u1"]) < near) and \
                 q["v0"] < p["v1"] and p["v0"] < q["v1"]
-            across_v = (abs(q["v1"] - p["v0"]) < 1e-6 or abs(q["v0"] - p["v1"]) < 1e-6) and \
+            across_v = (abs(q["v1"] - p["v0"]) < near or abs(q["v0"] - p["v1"]) < near) and \
                 q["u0"] < p["u1"] and p["u0"] < q["u1"]
             u0, u1 = min(p["u0"], q["u0"]), max(p["u1"], q["u1"])
             v0, v1 = min(p["v0"], q["v0"]), max(p["v1"], q["v1"])
@@ -212,10 +225,22 @@ def merge_slivers(pieces, ids):
 
 
 # ---------------- pieces → tiles ----------------
+CUT_MIN = 0.25   # cm: a thinner leftover is not cut off, it goes into the joint
+
+
+class Tile(list):
+    """A tile's pieces as (piece, x, y), and `cuts`: the straight cuts that free them, each (x0, y0, x1, y1) on the
+    tile, cm, made through the whole offcut being split, as a tile cutter does."""
+
+    def __init__(self):
+        super().__init__()
+        self.cuts = []
+
+
 def pack(pieces, bw=TW, bh=TH):
     """Guillotine cutting: each piece (w along the tile's bw, h along bh) into the offcut it fits best, never turned;
     the leftover is split so the bigger offcut stays whole. A few orders and split rules, the fewest tiles wins.
-    Returns tiles as lists of (piece, x, y)."""
+    Returns tiles as Tile lists of (piece, x, y)."""
     best = None
     orders = [lambda p: (-p["w"] * p["h"], -p["w"]), lambda p: (-p["w"], -p["h"]), lambda p: (-p["h"], -p["w"])]
     for key in orders:
@@ -231,17 +256,20 @@ def pack(pieces, bw=TW, bh=TH):
                             if pick is None or score < pick[0]:
                                 pick = (score, ti, fi)
                 if pick is None:
-                    tiles.append([])
+                    tiles.append(Tile())
                     free.append([(0.0, 0.0, bw, bh)])
                     pick = (0, len(tiles) - 1, 0)
                 _, ti, fi = pick
                 fx, fy, fw, fh = free[ti].pop(fi)
                 tiles[ti].append((p, fx, fy))
                 rw, rh = fw - w, fh - h
+                across, down = (fx, fy + h, fx + w, fy + h), (fx + w, fy, fx + w, fy + fh)   # first down, then across
                 if (rw * fh >= fw * rh) == (rule == 0):
                     new = [(fx + w, fy, rw, fh), (fx, fy + h, w, rh)]
-                else:
+                else:   # first across the whole offcut, then down the piece
                     new = [(fx + w, fy, rw, h), (fx, fy + h, fw, rh)]
+                    across, down = (fx, fy + h, fx + fw, fy + h), (fx + w, fy, fx + w, fy + h)
+                tiles[ti].cuts += [c for c, r in ((down, rw), (across, rh)) if r > CUT_MIN]
                 free[ti] += [r for r in new if r[2] >= 3 and r[3] >= 3]
             if best is None or len(tiles) < len(best):
                 best = tiles
@@ -257,7 +285,9 @@ class Group:
         self.pieces = []
         for s in self.surfaces:
             ps = s.cut()
-            if s.kind == "floor":
+            if s.kind == "floor" and getattr(s, "rows_down", False):   # from the far rows toward v falling
+                ps.sort(key=lambda p: (-p["cj"], p["u0"]))   # row by row of the grid, each left to right
+            elif s.kind == "floor":
                 ps.sort(key=lambda p: (round(p["v0"]), p["u0"]))
             elif s.kind == "part":
                 ps.sort(key=lambda p: (round(p["v0"]), p["u0"]))
@@ -267,7 +297,10 @@ class Group:
         for i, p in enumerate(self.pieces):
             p["order"] = i
         tiles = pack(self.pieces)
-        tiles.sort(key=lambda t: min(p["order"] for p, _, _ in t))
+        if any(getattr(s, "rows_down", False) for s in self.surfaces):   # a tile takes the number of its biggest piece
+            tiles.sort(key=lambda t: max(t, key=lambda e: (e[0]["area"], -e[0]["order"]))[0]["order"])
+        else:   # in the order its first piece is laid
+            tiles.sort(key=lambda t: min(p["order"] for p, _, _ in t))
         self.tiles = []
         for n, t in enumerate(tiles, first):
             t.sort(key=lambda e: e[0]["order"])
@@ -306,11 +339,12 @@ def build(cfg, m):
                        kind=kind, wall=wid, duna=duna)
 
     hall_floor = floor("floor_main", "пол прихожей и кухни-гостиной", m.tiles[0])
+    hall_floor.rows_down = True   # numbered from the corridor, as it is laid: from the wet rooms to the exit, then on
     lgk = floor("floor_lgk", "пол лоджии кухни-гостиной", zone(XR["loggia_kitchen"]["floor"]["origin"]))
     lgb = floor("floor_lgb", "пол лоджии спальни 1", zone(XR["loggia_bedroom_1"]["floor"]["origin"]))
 
     # bathroom: the bath against the far wall (front y 474, its screen there, a 7 deep toe recess 10 high from the
-    # low box face x 82); boxes along the left wall: installation y 366.5..441 to 120, pipe box 441..474.5 to 20
+    # low box face x 82); boxes along the left wall: installation y 366.5..442.5 to 120, pipe box 442.5..474.5 to 20
     bo = XR["bathroom"]["walls"]["origin"]
     bath_floor = floor("floor_bath", "пол", zone(XR["bathroom"]["floor"]["origin"]), minus=[
         [(61.5, 366.5), (82, 366.5), (82, 552.5), (61.5, 552.5)],      # under the boxes and the bath behind them
@@ -319,20 +353,20 @@ def build(cfg, m):
         bath_floor,
         wall("bath_door", "bath_door", "стена с дверью", bo[0], excl=[(*S("bath_door", 61.5, 82), 0, 120)]),
         wall("bath_left", "bath_left", "левая стена", bo[1], excl=[(*S("bath_left", 474, 552.5), 0, 60),
-                                                                 (*S("bath_left", 441, 474.5), 0, 20),
-                                                                 (*S("bath_left", 366.5, 441), 0, 120)]),
-        wall("box_high", "bath_left", "лицо короба инсталляции", bo[1], region=[(*S("bath_left", 366.5, 441), 0, 120)],
+                                                                 (*S("bath_left", 442.5, 474.5), 0, 20),
+                                                                 (*S("bath_left", 366.5, 442.5), 0, 120)]),
+        wall("box_high", "bath_left", "лицо короба инсталляции", bo[1], region=[(*S("bath_left", 366.5, 442.5), 0, 120)],
              kind="face"),
-        wall("box_low", "bath_left", "лицо низкого короба", bo[1], region=[(*S("bath_left", 441, 474.5), 0, 20)],
+        wall("box_low", "bath_left", "лицо низкого короба", bo[1], region=[(*S("bath_left", 442.5, 474.5), 0, 20)],
              kind="face"),
         wall("screen", "bath_far", "экран ванны", bo[0], region=[(*S("bath_far", 61.5, 82), 20, 60),
                                                                 (*S("bath_far", 82, 239.5), 10, 60)], kind="face"),
         wall("kick", "bath_far", "подступенок экрана", bo[0], region=[(*S("bath_far", 82, 239.5), 0, 10)], kind="face"),
         wall("bath_right", "bath_right", "правая стена", bo[1], excl=[(*S("bath_right", 474, 552.5), 0, 60)],
              opt=[(*S("bath_right", 368.5, 403.5), 0, H_WET)]),
-        Surface("box_high_top", "верх короба инсталляции", (0, 0), [(0, 74.5, 0, 20.5)], kind="part"),
+        Surface("box_high_top", "верх короба инсталляции", (0, 0), [(0, 76, 0, 20.5)], kind="part"),
         Surface("box_high_end", "торец короба инсталляции", (bo[0], 0), [(61.5, 82, 20, 120)], kind="part"),
-        Surface("box_low_top", "верх низкого короба", (0, 0), [(0, 33.5, 0, 20.5)], kind="part"),
+        Surface("box_low_top", "верх низкого короба", (0, 0), [(0, 32, 0, 20.5)], kind="part"),
     ]
     duna = [wall("bath_far", "bath_far", "стена за ванной", bo[0], region=[(0, W["bath_far"].len, 60, H_WET)],
                  duna=True)]
@@ -366,6 +400,16 @@ def build(cfg, m):
         Group("toilet", "Туалет: пол, стены, лицо короба", toilet),
         Group("splash", "Кухня: фартук", splash),
     ], Group("duna", "Ванная: стена за ванной — Duna Magnum White Carving", duna, prefix="Д")
+
+
+def laid(cfg, m):
+    """The groups cut, packed and numbered: Amrita 1… through the groups, Duna Д1… on its own."""
+    groups, duna = build(cfg, m)
+    n = 1
+    for g in groups:
+        n = g.layout(n)
+    duna.layout(1)
+    return groups, duna
 
 
 # ---------------- drawing ----------------
@@ -598,13 +642,13 @@ class Elevations:
         # joints along the wall where its tile meets the floor or the countertop, and the rows up it
         main = p["surfaces"][0]
         o = main.origin
-        js = [o[0] + k * TW for k in range(math.floor(-o[0] / TW), math.ceil((L - o[0]) / TW) + 1)]
+        js = [o[0] + k * PU for k in range(math.floor(-o[0] / PU), math.ceil((L - o[0]) / PU) + 1)]
         self.chain(d, [s0, L] + [s for s in js if s0 + 0.5 < s < L - 0.5], lambda s: x + (L - s) * sc, box[3] + 22,
-                   True, TW)
+                   True, PU)
         self.chain(d, [s0, L], lambda s: x + (L - s) * sc, box[3] + 62, True)
-        zs = [z0 + k * TH for k in range(int((p["H"] - z0) // TH) + 1)]
+        zs = [z0 + k * PV for k in range(int((p["H"] - z0) // PV) + 1)]
         self.chain(d, [z0, p["H"]] + [z for z in zs if z0 < z < p["H"] - 0.5], lambda z: y0 + (p["H"] - z) * sc,
-                   x - 20, False, TH)
+                   x - 20, False, PV)
         d.text((x, y0 - 80), p["title"], fill=INK, font=font(22, True))
 
 
@@ -667,11 +711,7 @@ def main():
     args = ap.parse_args()
     cfg = json.loads(Path(args.config).read_text())
     m = Model(cfg, json.loads(Path(args.plan).read_text()))
-    groups, duna = build(cfg, m)
-    n = 1
-    for g in groups:
-        n = g.layout(n)
-    duna.layout(1)
+    groups, duna = laid(cfg, m)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for f in out.glob("*.png"):
@@ -709,7 +749,7 @@ def main():
               dashed=[((*sb("bath_right", 368.5, 403.5), 0, H_WET), "за пеналом")],
               notes=[((*sb("bath_right", 474, 552.5), 0, 60), "за ванной")]),
     ], parts=[S["box_high_top"], S["box_high_end"], S["box_low_top"]], notes=[
-        "Плитка 120 × 60 горизонтально, шов 2 мм, швы в линию с полом; ряды по 60 от пола. Номер — плитка, из которой "
+        "Плитка 120 × 60 горизонтально, шов 1 мм, швы в линию с полом; ряды по 60 от пола. Номер — плитка, из которой "
         "вырезан кусок: «12» — целая, «12а», «12б» — куски плитки 12 (см. лист «Раскрой»); красным — подрезка, с размером.",
         "Стены — по чистовой (по лицу плитки). Лицо коробов, экран и подступенок — в плоскости перед стеной, обведены. "
         "Ниже борта за ванной плитки нет. Пунктир — шкаф до потолка: плитка за ним в счёте, её можно не класть.",
@@ -729,7 +769,7 @@ def main():
                       ((*sb("toilet_right", 526, 552.5), 120, H_WET), "шкаф")],
               notes=[((*sb("toilet_right", 526, 552.5), 0, 120), "короб")]),
     ], notes=[
-        "Плитка 120 × 60 горизонтально, шов 2 мм; по ширине от левого угла, от лица короба целая 120; ряды по 60 от пола "
+        "Плитка 120 × 60 горизонтально, шов 1 мм; по ширине от левого угла, от лица короба целая 120; ряды по 60 от пола "
         "(шов по верху короба 120). Номер — плитка, из которой вырезан кусок; красным — подрезка, с размером.",
         "Верх короба — без плитки (ГКЛ, на нём шкаф). Пунктир — шкафы до потолка: плитка за ними в счёте, её можно не класть.",
     ])
