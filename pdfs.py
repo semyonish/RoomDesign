@@ -2,13 +2,13 @@
 «Обмерный план», «План мебели», «План освещения» — the sheets of plan_sketch.py / plans.py, whole apartment and each
 room; «Раскладка плитки», «Раскладка обоев» — a summary page and the sheets of tile_layout.py / wallpaper_layout.py;
 «Расчёт материалов» — pdf/src/Расчёт материалов.html, its numbers from stats.py and the layouts; «Расчёт плитки» —
-tiles, cuts, holes, 45° miters and grout from tile_works.py.
+tiles, cuts, holes, 45° miters and grout from tile_works.py; «Чертежи» — the sheets of drawings.py, room by room.
 
     .venv/bin/python plans.py && .venv/bin/python plan_sketch.py --rooms && .venv/bin/python export.py
     .venv/bin/python tile_layout.py && .venv/bin/python tile_works.py
     .venv/bin/python wallpaper_layout.py && .venv/bin/python wallpaper_layout.py --seams
     .venv/bin/python pdfs.py
-    .venv/bin/python pdfs.py tiles wallpaper     # just these: plans, tiles, works, wallpaper, seams, materials
+    .venv/bin/python pdfs.py tiles wallpaper     # just these: plans, tiles, works, wallpaper, seams, materials, drawings
 """
 import datetime
 import json
@@ -384,9 +384,18 @@ def wallpaper_seams(tmp):
     wallpaper(tmp, "wallpaper_seams.json", "Стыки обоев — сравнение раскладок", compare=True)
 
 
+def drawings(tmp):
+    """«Чертежи» — drawings.py: each room's plan and walls with sizes, then the sheets copied into its folder
+    (зеркало, полотенцесушитель, каркас короба, короб с бойлером), rooms in their folder order."""
+    sheets = []
+    for room in sorted(p for p in (SHEETS / "Чертежи").iterdir() if p.is_dir()):
+        sheets += [(f"{room.name.split(' ', 1)[1]}: {cap}", f) for cap, f in numbered(f"Чертежи/{room.name}")]
+    build("Чертежи", "Чертежи", "", sheets, tmp)
+
+
 def main():
     docs = {"plans": plans, "tiles": tiles, "works": works, "wallpaper": wallpaper, "seams": wallpaper_seams,
-            "materials": materials}
+            "materials": materials, "drawings": drawings}
     names = sys.argv[1:] or list(docs)
     if set(names) - set(docs):
         sys.exit(f"unknown: {', '.join(sorted(set(names) - set(docs)))}; choose from {', '.join(docs)}")
