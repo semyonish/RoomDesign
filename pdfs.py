@@ -398,6 +398,8 @@ TOC_CSS = """
              padding: 1.2pt 0; border-bottom: 0.5pt solid var(--line); }
 .toc .row span { color: var(--muted); white-space: nowrap; }
 .head h2.hh, .head h3.hh { display: inline; font-size: 12pt; font-weight: 700; margin: 0; padding: 0; border: 0; }
+.head a.back { color: var(--accent); font-weight: 700; font-size: 10pt; text-decoration: none; margin-right: 4mm;
+               padding: 0.8mm 3mm; border: 0.8pt solid var(--accent); border-radius: 2mm; }
 """
 
 
@@ -416,7 +418,8 @@ def drawings(tmp):
             kind = "land" if w / h > 1.05 else "port"
             where = f'<h2 class="hh">{room}</h2>' if k == 0 else room   # the room's bookmark on its first sheet
             secs.append(f'<section class="{kind}" id="p{page}"><div class="head"><b>{where} · <h3 class="hh">{cap}</h3>'
-                        f'</b><span>Чертежи · Квартира · {DATE} · лист {page} из {n}</span></div>'
+                        f'</b><span><a class="back" href="#p1">↑ Оглавление</a>Чертежи · Квартира · {DATE} · лист {page} из {n}'
+                        f'</span></div>'
                         f'<div class="img"><img src="{src.as_uri()}"></div></section>')
             rows.append(f'<a class="row" href="#p{page}">{cap}<span>{page}</span></a>')
             page += 1
