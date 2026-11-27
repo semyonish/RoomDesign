@@ -17,6 +17,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from plans import BOLD, FONT, FURNITURE_NAMES, Model, in_polygon, num
+from tile_layout import PV
 
 OUT = Path("renders/Рендеры/Чертежи")
 PLANS = Path("renders/Рендеры/Планы")
@@ -56,6 +57,57 @@ NAMES = {**FURNITURE_NAMES, "tv": "ТВ", "mirror": "зеркало", "radiator"
 BASE_NAMES = {"blind": "угловой", "filler": "", "door": "дверка", "drawers": "ящики", "oven": "духовка + варка",
               "sink": "мойка"}
 UPPER_NAMES = {"door": "дверка", "doors2": "2 дверки", "microwave": "СВЧ", "hood": "вытяжка", "filler": "", "end": "торец"}
+
+
+MOUNT_BAND = (5, 15)   # a backlit mirror's wall brackets usually sit this far below its top edge (model not chosen)
+NO_DRILL = 3           # drill holes keep this far from a tile joint
+
+
+def mirror_mounts(d, a, b, z0, z1, Z, sc):
+    """Over a mirror on a tiled wall (pixel columns a..b, heights z0..z1): the usual band of its brackets (blue,
+    dashed) and each tile joint behind it with ±NO_DRILL where not to drill (red hatching). Returns the boxes used."""
+    boxes = []
+    for k in range(1, 6):
+        zj = k * PV
+        if not z0 - NO_DRILL < zj < z1 + NO_DRILL:
+            continue
+        y0, y1 = Z(zj + NO_DRILL), Z(zj - NO_DRILL)
+        h = y1 - y0
+        x = a - h
+        while x < b:
+            xs0, xs1 = max(x, a), min(x + h, b)
+            d.line([xs0, y1 - (xs0 - x), xs1, y1 - (xs1 - x)], fill=(225, 120, 120), width=1)
+            x += 9
+        d.line([a, Z(zj), b, Z(zj)], fill=RED, width=2)
+        t = f"шов {num(zj)}: не сверлить {num(zj - NO_DRILL)}–{num(zj + NO_DRILL)}"
+        f = font(14)
+        if f.getlength(t) + 8 > b - a:
+            t = f"шов {num(zj)} ±{NO_DRILL}"
+        tb = d.textbbox(((a + b) / 2, y1 + 11), t, font=f, anchor="mm")
+        d.rectangle([tb[0] - 3, tb[1] - 2, tb[2] + 3, tb[3] + 2], fill="white")
+        d.text(((a + b) / 2, y1 + 11), t, fill=RED, font=f, anchor="mm")
+        boxes += [(a, y0, b, y1), (tb[0] - 3, tb[1] - 2, tb[2] + 3, tb[3] + 2)]
+    ya, yb = Z(z1 - MOUNT_BAND[0]), Z(z1 - MOUNT_BAND[1])
+    xa, xb = a + 5 * sc, b - 5 * sc
+    for (p0, p1) in (((xa, ya), (xb, ya)), ((xb, ya), (xb, yb)), ((xb, yb), (xa, yb)), ((xa, yb), (xa, ya))):
+        n = max(abs(p1[0] - p0[0]), abs(p1[1] - p0[1]))
+        k = 0.0
+        while k < n:
+            e = min(k + 8, n)
+            d.line([p0[0] + (p1[0] - p0[0]) * k / n, p0[1] + (p1[1] - p0[1]) * k / n,
+                    p0[0] + (p1[0] - p0[0]) * e / n, p0[1] + (p1[1] - p0[1]) * e / n], fill=BLUE, width=2)
+            k += 13
+    t = f"крепления ~{num(z1 - MOUNT_BAND[1])}–{num(z1 - MOUNT_BAND[0])}"
+    tb = d.textbbox(((xa + xb) / 2, (ya + yb) / 2), t, font=font(14), anchor="mm")
+    d.rectangle([tb[0] - 3, tb[1] - 2, tb[2] + 3, tb[3] + 2], fill="white")
+    d.text(((xa + xb) / 2, (ya + yb) / 2), t, fill=BLUE, font=font(14), anchor="mm")
+    boxes += [(xa, ya, xb, yb)]
+    return boxes
+
+
+MOUNT_NOTE = ("Крепления зеркала: модель не выбрана — синим пунктиром обычная зона кронштейнов (5–15 ниже верха "
+              "зеркала), красной штриховкой — швы плитки за зеркалом и по 3 см от них, там не сверлить. Точные точки — по "
+              "шаблону выбранного зеркала; если отверстие попадает в штриховку, зеркало сдвинуть на 2–3 см.")
 
 
 def font(size, bold=False):
@@ -256,8 +308,9 @@ def points_of(cfg, plan, m, items):
         right = s0          # seen from the room s runs right to left: the right-hand end is the smaller s
         end = right if it.get("connection", "right") == "right" else s1
         s = end + (1.5 if end == s0 else -1.5)
+        how = "подрозетник под плиткой, в плитке отверстие ~Ø12; "   # plan.json towel_warmer.cable_outlet
         out.append(Point(w, [(s, it["elevation"] + 5, "cable")], "cable",
-                         note="вывод кабеля полотенцесушителя (уточнить по паспорту)", color=RED))
+                         note=f"вывод кабеля полотенцесушителя ({how}место сверить с паспортом)", color=RED))
     known = [(p.wall.pt(p.s, p.d), p.z) for p in out]
     for o in plan.get("outlets", {}).get("items", []):   # proposed in plan.json, not in the 3D model yet
         x, y, z = o.get("x"), o.get("y"), o.get("z")
@@ -511,6 +564,13 @@ def wall_sheet(m, w, room, idx, title, items, points, cfg, H, tiles, floor_tile,
             if it.z0 < zl < it.z1:
                 d.line([a, Z(zl), b, Z(zl)], fill=FURN_EDGE, width=1)
     obstacles = []      # electrical frames and badges, then each placed label
+    mounts = False
+    if t_self:          # mirrors on tile: where their brackets usually go, the joints not to drill at
+        for it in front:
+            if it.kind == "glass":
+                a, top, b, bot = rects[id(it)]
+                obstacles += mirror_mounts(d, a, b, it.z0, it.z1, Z, SC)
+                mounts = True
 
     # electrical: frames, numbered
     legend = []
@@ -789,6 +849,8 @@ def wall_sheet(m, w, room, idx, title, items, points, cfg, H, tiles, floor_tile,
                      "следующий пост +71 мм). Номера — по списку выше.")
     if side:
         notes.append("Серым сбоку — то, что стоит у соседних стен и упирается в эту (вид с торца).")
+    if mounts:
+        notes.append(MOUNT_NOTE)
     for t in notes:
         for line in wrap(t, font(18), Wpx - LEFT - 60):
             d.text((LEFT, y), line, fill=GREY, font=font(18), anchor="lm")

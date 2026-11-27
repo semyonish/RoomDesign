@@ -11,6 +11,7 @@
 import json
 from pathlib import Path
 
+from drawings import MOUNT_NOTE, mirror_mounts
 from plans import num
 from towel_walls import BATH, BLUE, FACE, FACE_EDGE, GREY, INK, LEFT, LIGHT, OTHER, RED, SC, TOP, H, Sheet
 
@@ -85,6 +86,7 @@ class Mirrored(Sheet):
         for k in range(int(b * SC)):                    # the lit band around the glass
             e = i * SC + k
             self.d.rectangle([xa + e, self.Z(z1) + e, xb - e, self.Z(z0) - e], outline=GLOW)
+        mirror_mounts(self.d, xa, xb, z0, z1, self.Z, SC)   # brackets: the usual band; the tile joints not to drill
         self.prect(y0, y1, 0, 3, fill=GLASS, outline=INK, width=2)
         return y0, y1, z0, z1
 
@@ -94,7 +96,7 @@ class Mirrored(Sheet):
         self.d.ellipse([x - 13, zz - 13, x + 13, zz + 13], fill="white", outline=RED, width=4)
         self.d.line([x - 8, zz - 8, x + 8, zz + 8], fill=RED, width=3)
         self.d.line([x - 8, zz + 8, x + 8, zz - 8], fill=RED, width=3)
-        self.text((x, zz - 44), tag, 17, RED, bg="white")
+        self.text((x, zz + 40), tag, 17, RED, bg="white")
         p = self.Dp(0)
         self.d.ellipse([x - 10, p - 10, x + 10, p + 10], fill="white", outline=RED, width=4)
 
@@ -216,6 +218,7 @@ def main():
         f"Точка в зоне 2 ({num(bath_y - cy)} от ванны, ближе 60): в стене только конец кабеля, без коробки и разъёма, "
         "запас ~40; подключение — в клеммах зеркала. Питание постоянное (зеркало включается своей кнопкой), линия "
         "через УЗО 30 мА. Место сверить с паспортом выбранного зеркала до плитки.",
+        MOUNT_NOTE,
         f"Фиолетовый пунктир — зоны у ванны до 225 от пола: розетка возможна только ближе к двери, чем {num(z2)} "
         f"({num(z2 - door_y)} от угла у двери).",
         f"Зелёным — розетка внутри пенала (предложено, не решено): на стене за пеналом по его оси, в "
@@ -293,6 +296,7 @@ def main():
         "закрыт зеркалом и далеко от креплений у верхнего края.",
         "Конец кабеля, запас ~40; подключение — в клеммах зеркала, без розетки. Питание постоянное (своя кнопка на "
         "зеркале), линия через УЗО 30 мА. Место сверить с паспортом выбранного зеркала до плитки.",
+        MOUNT_NOTE,
         f"Рядом: влагозащищённая розетка с крышкой на лице короба слева от раковины — на {num(sz)} от пола, центр в "
         f"{num(sd)} от этой стены (на 15 выше раковины).",
     ], s.PB + 60)
