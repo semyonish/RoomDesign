@@ -70,9 +70,11 @@ def c(v, d=2):  # Russian decimal comma
     return f"{v:.{d}f}".replace(".", ",")
 
 
-def print_pdf(html, pdf, tmp):
+def print_pdf(html, pdf, tmp, outline=False):
+    """outline: PDF bookmarks from the visible h2/h3 headings (Chrome builds them from the tagged PDF)."""
     OUT.mkdir(exist_ok=True)
     subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
+                    *(["--generate-pdf-document-outline"] if outline else []),
                     f"--user-data-dir={tmp / 'chrome-profile'}", f"--print-to-pdf={pdf}", html.as_uri()],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
@@ -385,13 +387,51 @@ def wallpaper_seams(tmp):
     wallpaper(tmp, "wallpaper_seams.json", "Стыки обоев — сравнение раскладок", compare=True)
 
 
+TOC_CSS = """
+.toc h2 { margin: 0 0 2pt; border: 0; font-size: 19pt; }
+.toc .cols { columns: 2; column-gap: 9mm; margin-top: 8pt; }
+.toc .room { break-inside: avoid; margin: 0 0 7pt; }
+.toc a { color: var(--ink); text-decoration: none; }
+.toc a.rt { display: block; font-weight: 700; font-size: 10.5pt; padding-bottom: 1.5pt; margin-bottom: 1pt;
+            border-bottom: 1pt solid var(--ink); }
+.toc a.row { display: flex; justify-content: space-between; gap: 6pt; font-size: 9pt; line-height: 1.25;
+             padding: 1.2pt 0; border-bottom: 0.5pt solid var(--line); }
+.toc .row span { color: var(--muted); white-space: nowrap; }
+.head h2.hh, .head h3.hh { display: inline; font-size: 12pt; font-weight: 700; margin: 0; padding: 0; border: 0; }
+"""
+
+
 def drawings(tmp):
     """«Чертежи» — drawings.py: each room's plan and walls with sizes, then the sheets copied into its folder
-    (зеркало, полотенцесушитель, каркас короба, короб с бойлером), rooms in their folder order."""
-    sheets = []
-    for room in sorted(p for p in (SHEETS / "Чертежи").iterdir() if p.is_dir()):
-        sheets += [(f"{room.name.split(' ', 1)[1]}: {cap}", f) for cap, f in numbered(f"Чертежи/{room.name}")]
-    build("Чертежи", "Чертежи", "", sheets, tmp)
+    (зеркало, полотенцесушитель, каркас короба, короб с бойлером), rooms in their folder order. Page 1 is a
+    clickable table of contents; the PDF gets bookmarks: rooms, and each room's sheets under it."""
+    rooms = [(r.name.split(" ", 1)[1], numbered(f"Чертежи/{r.name}"))
+             for r in sorted(p for p in (SHEETS / "Чертежи").iterdir() if p.is_dir())]
+    n = 1 + sum(len(sh) for _, sh in rooms)
+    toc, secs, page = [], [], 2
+    for room, sheets in rooms:
+        rows = []
+        for k, (cap, src) in enumerate(sheets):
+            w, h = Image.open(src).size
+            kind = "land" if w / h > 1.05 else "port"
+            where = f'<h2 class="hh">{room}</h2>' if k == 0 else room   # the room's bookmark on its first sheet
+            secs.append(f'<section class="{kind}" id="p{page}"><div class="head"><b>{where} · <h3 class="hh">{cap}</h3>'
+                        f'</b><span>Чертежи · Квартира · {DATE} · лист {page} из {n}</span></div>'
+                        f'<div class="img"><img src="{src.as_uri()}"></div></section>')
+            rows.append(f'<a class="row" href="#p{page}">{cap}<span>{page}</span></a>')
+            page += 1
+        toc.append(f'<div class="room"><a class="rt" href="#p{page - len(sheets)}">{room}</a>{"".join(rows)}</div>')
+    head = (f'<section class="text toc" id="p1"><h2>Чертежи</h2><div class="sub">Квартира · {DATE} · {n} листов · '
+            f'нажмите на комнату или лист, чтобы перейти</div><div class="cols">{"".join(toc)}</div></section>')
+    html = tmp / "Чертежи.html"
+    html.write_text(f'<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Чертежи</title>'
+                    f'<style>{CSS}{TOC_CSS}</style></head><body>{head}{"".join(secs)}</body></html>')
+    pdf = OUT / "Чертежи.pdf"
+    print_pdf(html, pdf, tmp, outline=True)
+    pages = int(subprocess.run(["pdfinfo", pdf], capture_output=True, text=True).stdout.split("Pages:")[1].split()[0])
+    if pages != n:   # the table of contents ran onto a second page: the page numbers in it are off
+        sys.exit(f"{pdf}: {pages} pages, expected {n} — the table of contents no longer fits on one page")
+    print(pdf, n)
     drawings_png()
 
 
